@@ -28,6 +28,8 @@
   .list a, .list button { display: block; text-decoration: none; font: inherit; font-size: 15px; font-weight: 600; color: var(--text);
     background: var(--soft); border: 0; border-radius: 14px; padding: 14px; cursor: pointer; }
   .list a:hover, .list button:hover { filter: brightness(0.96); }
+  .list a.main { background: #8b5cf6; color: #fff; font-size: 16.5px; padding: 17px; }
+  .list .safe { color: var(--sub); font-size: 12.5px; margin: -4px 0 4px; }
   .bank { background: var(--soft); border-radius: 14px; padding: 14px; text-align: left; }
   .bank .label { font-size: 12.5px; color: var(--sub); }
   .bank .num { font-size: 15px; font-weight: 600; margin: 2px 0 10px; word-break: keep-all; }
@@ -58,7 +60,13 @@ const L = window.MR_LINKS || {};
 const list = document.getElementById('list');
 for (const [k, label] of window.MR_DONATE_ITEMS || []) {
   if (!L[k]) continue;
-  list.append(Object.assign(document.createElement('a'), { href: L[k], textContent: label, target: '_blank', rel: 'noopener' }));
+  const a = Object.assign(document.createElement('a'), { href: L[k], textContent: label, target: '_blank', rel: 'noopener' });
+  // The first available method is the main one; Toonation also gets a short "why it's safe" line.
+  if (!list.children.length) a.className = 'main';
+  list.append(a);
+  if (k === 'toonation') {
+    list.append(Object.assign(document.createElement('p'), { className: 'safe', textContent: '후원 플랫폼을 거쳐서 서로의 개인정보가 드러나지 않아요' }));
+  }
 }
 if (L.bank) {
   const box = document.createElement('div');
