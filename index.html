@@ -58,6 +58,10 @@
   details summary { cursor: pointer; color: var(--sub); font-size: 14px; }
   .hidden { display: none !important; }
   .hint { color: var(--sub); font-size: 12px; margin-top: 6px; }
+  .linkbtn { text-decoration: none; color: var(--text); background: #262b36; border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 14px; font-size: 14px; }
+  .linkbtn:hover { border-color: var(--accent); }
+  .linkbtn.primary-link { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
   footer { margin-top: 28px; text-align: center; color: var(--sub); font-size: 12px; }
   .donate { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 14px; }
   .donate a { text-decoration: none; color: var(--text); background: #262b36; border: 1px solid var(--line);
@@ -80,6 +84,15 @@
     <button id="installBtn" class="on">설치</button>
   </div>
 
+  <div class="card">
+    <b>🔌 가상 마이크 (VB-Cable)</b>
+    <div class="hint" style="margin:2px 0 10px">오버워치로 송출하려면 처음 한 번 설치가 필요해요. (스테레오 믹스가 있으면 생략 가능)</div>
+    <div class="chips">
+      <a class="linkbtn primary-link" href="https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip">⬇ VB-Cable 다운로드</a>
+      <a class="linkbtn" href="guide.html">📖 설치 매뉴얼</a>
+    </div>
+  </div>
+
   <div id="stereoInfo" class="banner warn">
     <b>스테레오 믹스 모드로 동작 중이에요.</b> 설치 없이 송출돼요.
     오버워치 음성 입력 장치를 <b>스테레오 믹스</b>로 바꾸세요.
@@ -91,7 +104,7 @@
     <b>송출할 장치가 없어요.</b> 둘 중 하나가 필요해요.
     <br>① <b>스테레오 믹스 켜기 (설치 없음)</b>: Win+R → <code>mmsys.cpl</code> → [녹음] 탭 → 빈 곳 우클릭 "사용 안 함 장치 표시"
     → "스테레오 믹스" 우클릭 → 사용 → 이 창 새로고침(F5)
-    <br>② <b>VB-Cable 설치</b>:
+    <br>② <b>VB-Cable 설치</b> (<a href="guide.html">📖 설치 매뉴얼</a>):
     <a href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">공식 페이지 열기</a> → Windows용 다운로드 → 압축 풀기 →
     <b>VBCABLE_Setup_x64.exe</b> 우클릭 "관리자 권한으로 실행" → Install Driver → PC 재시작 → 이 창 새로고침(F5)
     <br><small>VB-Cable은 VB-Audio(www.vb-cable.com)의 기부웨어입니다.</small>
