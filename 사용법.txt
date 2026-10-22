@@ -2,7 +2,7 @@
 ================
 마이크에 리버브를 넣고 MR과 섞어서 오버워치 음성채팅으로 보내는 프로그램입니다.
 
-사이트 : https://wjsrkdgns123.github.io/mr-reverb/
+사이트 : https://voice-meter.input-info.workers.dev/mr/
 
 [처음 한 번만]
 1. 크롬 또는 엣지로 사이트 열기 → 마이크 "허용"
