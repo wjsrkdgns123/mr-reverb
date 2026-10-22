@@ -146,6 +146,10 @@
   .auto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--soft); border-radius: 12px; padding: 10px 12px; }
   .auto .hint { margin: 0; flex: 1; min-width: 200px; }
   .autoBtn { width: 100%; padding: 12px; font-weight: 600; }
+  .diag { background: var(--warn-bg); border-radius: 12px; padding: 12px 14px; margin-top: 10px; font-size: 13px; }
+  .diag b { color: var(--warn); }
+  .diag .acts { margin-top: 8px; display: flex; gap: 8px; }
+  .diag button { font-size: 13px; padding: 7px 12px; }
   ul.steps { margin: 0; padding-left: 18px; font-size: 13.5px; }
   ul.steps li { margin-bottom: 6px; }
 
@@ -260,6 +264,16 @@
       <p id="latency" class="hint"></p>
       <p id="clipWarn" class="hint hidden">⚠ 마이크 입력이 너무 커서 깨지고 있어요. 오디오 인터페이스 게인이나 Windows 마이크 볼륨을 낮추고,
         대신 "내 목소리"를 올려 주세요.</p>
+      <div id="micSilent" class="diag hidden">
+        <b>🎙 마이크 소리가 안 들어와요</b> (지금 마이크: <span id="micSilentName"></span>)<br>
+        말을 해도 아래 "🎤 목소리" 막대가 안 움직이면 마이크가 잘못 잡힌 거예요.
+        <div class="acts"><button id="micFixBtn">마이크 바꾸기</button></div>
+      </div>
+      <div id="stereoMonWarn" class="diag hidden">
+        <b>🎧 헤드폰이 Realtek이 아니에요</b> (지금: <span id="stereoMonName"></span>)<br>
+        스테레오 믹스는 Realtek으로 나가는 소리만 송출해요. 이대로면 MR만 나가고 <b>내 목소리·리버브는 안 나가요.</b>
+        <div class="acts"><button id="realtekFixBtn" class="btn-primary">Realtek으로 바꾸기</button></div>
+      </div>
     </section>
 
     <section>
@@ -681,7 +695,21 @@ function fill(sel, list, chosen) {
   if (!list.some((d) => d.deviceId === chosen) && list[0]) sel.value = list[0].deviceId;
 }
 
+// Stereo Mix only records the Realtek output, so in that mode the page must play there.
+const realtekOption = () => [...$('monSel').options].find((o) => /realtek/i.test(o.text));
+function checkStereoMon() {
+  const rt = realtekOption();
+  const txt = $('monSel').selectedOptions[0]?.text ?? '';
+  const bad = mode === 'stereo' && hasStereo && !!rt && !/realtek/i.test(txt);
+  $('stereoMonName').textContent = txt.replace(/^기본값 - /, '') || '-';
+  $('stereoMonWarn').classList.toggle('hidden', !bad);
+  return bad;
+}
+
 async function routeOutputs() {
+  // Without a saved choice, switch to Realtek automatically in Stereo Mix mode.
+  if (mode === 'stereo' && !store.get('mon', null) && checkStereoMon()) $('monSel').value = realtekOption().value;
+  checkStereoMon();
   const send = $('sendSel').value, mon = $('monSel').value;
   const stereo = mode === 'stereo';
   const sendIsMon = stereo || send === mon || !send;
@@ -750,16 +778,31 @@ function meterLoop() {
   tick();
 }
 // ---- voice vs MR balance (RMS loudness in dB, smoothed while both are sounding) ----
-const balBuf = new Float32Array(2048);
+const bufs = new Map(); // one buffer per analyser size, so readings never mix
 const bal = { v: -90, m: -90, diff: null, shown: 0 };
 function rmsDb(an) {
-  an.getFloatTimeDomainData(balBuf);
-  let sum = 0; for (const s of balBuf) sum += s * s;
-  return 20 * Math.log10(Math.sqrt(sum / balBuf.length) + 1e-9);
+  let buf = bufs.get(an.fftSize);
+  if (!buf) bufs.set(an.fftSize, (buf = new Float32Array(an.fftSize)));
+  an.getFloatTimeDomainData(buf);
+  let sum = 0; for (const s of buf) sum += s * s;
+  return 20 * Math.log10(Math.sqrt(sum / buf.length) + 1e-9);
 }
 const dbToPct = (db) => Math.max(0, Math.min(100, ((db + 60) / 60) * 100));
+// Dead-mic detection: no signal at all from the raw input for a while while audio is running.
+const micWatch = { since: 0, lastSignal: 0 };
+function checkMicSilence() {
+  const now = performance.now();
+  if (!nodes.rawAnalyser || ctx.state !== 'running') { micWatch.since = 0; return; }
+  if (!micWatch.since) micWatch.since = now;
+  if (rmsDb(nodes.rawAnalyser) > -75) micWatch.lastSignal = now;
+  const silentFor = now - Math.max(micWatch.since, micWatch.lastSignal);
+  $('micSilentName').textContent = ($('micSel').selectedOptions[0]?.text || '-').replace(/^기본값 - /, '');
+  $('micSilent').classList.toggle('hidden', silentFor < 10000);
+}
+
 function updateBalance() {
   if (!nodes.voiceAn) return;
+  checkMicSilence();
   const v = rmsDb(nodes.voiceAn), m = rmsDb(nodes.mrAn);
   // fast attack, slow release so bars are readable
   bal.v = v > bal.v ? v : bal.v * 0.9 + v * 0.1;
@@ -866,6 +909,18 @@ document.querySelectorAll('#modeChips button, .opt .use').forEach((b) => b.oncli
 // The setup card stays open for first-timers; once folded it remembers that.
 $('setupBox').open = store.get('setupOpen', true);
 $('autoBtn').onclick = () => autoSetup();
+$('micFixBtn').onclick = () => {
+  $('devBox').open = true;
+  $('micSel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('micSel').focus();
+};
+$('realtekFixBtn').onclick = () => {
+  const rt = realtekOption();
+  if (!rt) return;
+  $('monSel').value = rt.value;
+  store.set('mon', rt.value);
+  routeOutputs();
+};
 $('autoLink').onclick = (e) => {
   e.preventDefault();
   $('devBox').open = true;
