@@ -236,6 +236,10 @@
         <span id="liveText">준비 중…</span>
       </div>
       <div class="meter"><i id="meter"></i></div>
+      <p class="hint">🎧 듣는 곳: <b id="monName">-</b><span id="monVoiceOff" class="hidden" style="color:var(--warn)"> · 내 목소리 듣기 꺼짐</span>
+        · <a href="#" id="monChange" style="color:var(--accent)">바꾸기</a></p>
+      <p id="defCableWarn" class="hint hidden" style="color:var(--warn)">⚠ Windows 기본 스피커가 <b>CABLE Input</b>으로 바뀌어 있어요.
+        이러면 게임·유튜브 소리가 안 들려요 → 작업 표시줄 🔊 아이콘 클릭 → 출력 장치를 <b>헤드폰</b>으로 바꾸세요.</p>
       <p id="latency" class="hint"></p>
       <p id="clipWarn" class="hint hidden">⚠ 마이크 입력이 너무 커서 깨지고 있어요. 오디오 인터페이스 게인이나 Windows 마이크 볼륨을 낮추고,
         대신 "내 목소리"를 올려 주세요.</p>
@@ -328,6 +332,8 @@
         <ul class="steps">
           <li><b>팀원에게 안 들림</b>: 오버워치 입력이 CABLE Output(또는 스테레오 믹스)인지, 위 상태가 "송출 중"인지 확인</li>
           <li><b>CABLE이 안 보임</b>: VB-Cable 설치 후 PC 재시작 → 이 창 새로고침</li>
+          <li><b>내 목소리가 헤드폰으로 안 들림</b>: 위쪽 "🎧 듣는 곳"이 실제 헤드폰인지 확인하고 아니면 [바꾸기], 장치 설정의 "내 목소리 듣기"가 켜져 있는지 확인</li>
+          <li><b>VB-Cable 설치 후 PC 소리가 다 안 들림</b>: 작업 표시줄 🔊 → 출력 장치를 헤드폰으로 (VB-Cable이 기본 스피커를 바꿔 놓은 것)</li>
           <li><b>스테레오 믹스가 목록에 없음</b>: <a href="guide.html#realtek" style="color:var(--accent)">Realtek 드라이버 설치 방법</a> 보기</li>
           <li><b>스테레오 믹스로 아무것도 안 나감</b>: 헤드폰이 메인보드 단자에 꽂혀 있고, 장치 설정의 헤드폰이 Realtek인지 확인</li>
           <li><b>목소리가 깨짐</b>: 고음 보호 켜기, 빨간 경고가 뜨면 마이크 게인 낮추기</li>
@@ -551,15 +557,24 @@ async function fillDevices() {
   const devs = await navigator.mediaDevices.enumerateDevices();
   const ins = devs.filter((d) => d.kind === 'audioinput');
   const outs = devs.filter((d) => d.kind === 'audiooutput');
-  const cable = outs.find((d) => /CABLE Input/i.test(d.label));
+  // "default"/"communications" are aliases that follow Windows settings, so never pin the send to them.
+  const real = (d) => d.deviceId !== 'default' && d.deviceId !== 'communications';
+  const cable = outs.find((d) => real(d) && /CABLE Input/i.test(d.label));
   hasCable = !!cable;
   hasStereo = ins.some((d) => STEREO_RE.test(d.label));
+  // Installing VB-Cable often makes "CABLE Input" the Windows default speaker, so "default" goes silent.
+  const defaultIsCable = /CABLE/i.test(outs.find((d) => d.deviceId === 'default')?.label ?? '');
+  $('defCableWarn').classList.toggle('hidden', !defaultIsCable);
 
   fill($('micSel'), ins.filter((d) => !STEREO_RE.test(d.label)), store.get('mic', 'default'));
-  fill($('sendSel'), outs, store.get('send', cable?.deviceId ?? ''));
-  fill($('monSel'), outs.filter((d) => !/CABLE/i.test(d.label)), store.get('mon', 'default'));
+  let sendPick = store.get('send', null);
+  if (!sendPick || !real({ deviceId: sendPick })) sendPick = cable?.deviceId ?? '';
+  fill($('sendSel'), outs.filter(real), sendPick);
+  const monList = outs.filter((d) => !/CABLE/i.test(d.label));
+  const savedMon = store.get('mon', null);
+  fill($('monSel'), monList, monList.some((d) => d.deviceId === savedMon) ? savedMon : pickHeadphones(monList));
 
-  if (!store.get('send', null) && cable) store.set('send', cable.deviceId);
+  if (cable && sendPick === cable.deviceId) store.set('send', cable.deviceId);
   // Prefer the user's saved choice; otherwise VB-Cable if present, else Stereo Mix.
   setMode(store.get('mode', null) ?? (hasCable ? 'cable' : hasStereo ? 'stereo' : 'cable'), false);
   for (const [id, ok, yes, no] of [['stereoBadge', hasStereo, '✅ 사용 가능', '꺼져 있음'], ['cableBadge', hasCable, '✅ 설치됨', '미설치']]) {
@@ -601,6 +616,16 @@ function setMode(m, save = true) {
   if (ctx) routeOutputs();
 }
 
+// Best guess for where the user listens: the Windows default if it isn't a virtual cable,
+// otherwise something that looks like headphones/speakers rather than a monitor or virtual device.
+function pickHeadphones(list) {
+  if (list.some((d) => d.deviceId === 'default')) return 'default';
+  const good = /헤드폰|headphone|헤드셋|headset|이어폰|earphone|스피커|speaker|realtek/i;
+  const bad = /hdmi|display|nvidia|amd|intel|monitor|모니터|digital|spdif|virtual|voicemeeter|sonar|broadcast/i;
+  const score = (d) => (good.test(d.label) ? 2 : 0) - (bad.test(d.label) ? 3 : 0);
+  return [...list].sort((a, b) => score(b) - score(a))[0]?.deviceId ?? '';
+}
+
 function fill(sel, list, chosen) {
   sel.innerHTML = '';
   for (const d of list) sel.add(new Option(d.label || '(이름 없음)', d.deviceId, false, d.deviceId === chosen));
@@ -617,6 +642,8 @@ async function routeOutputs() {
   if (ctx.setSinkId) await settle(ctx.setSinkId(mon === 'default' ? '' : mon));
   // If the send device is the same as the headphones, don't play the mix twice.
   sendEl.muted = sendIsMon;
+  $('monName').textContent = ($('monSel').selectedOptions[0]?.text || '-').replace(/^기본값 - /, '');
+  $('monVoiceOff').classList.toggle('hidden', monitorVoice || stereo);
   if (ctx.state === 'suspended') {
     $('liveDot').classList.remove('live');
     $('liveText').textContent = '화면을 한 번 누르면 시작돼요';
@@ -646,6 +673,7 @@ function setMonitorVoice(on) {
   nodes.monVoice.gain.value = on || mode === 'stereo' ? 1 : 0;
   $('monVoiceBtn').classList.toggle('on', on);
   $('monVoiceBtn').setAttribute('aria-pressed', on);
+  $('monVoiceOff').classList.toggle('hidden', on || mode === 'stereo');
 }
 
 function meterLoop() {
@@ -788,6 +816,12 @@ $('tabBtn').onclick = () => connectTab();
 document.querySelectorAll('#modeChips button, .opt .use').forEach((b) => b.onclick = () => nodes.monVoice && setMode(b.dataset.mode));
 // The setup card stays open for first-timers; once folded it remembers that.
 $('setupBox').open = store.get('setupOpen', true);
+$('monChange').onclick = (e) => {
+  e.preventDefault();
+  $('devBox').open = true;
+  $('monSel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('monSel').focus();
+};
 $('setupBox').addEventListener('toggle', () => store.set('setupOpen', $('setupBox').open));
 $('protectBtn').onclick = () => nodes.makeup && setProtect(!store.get('protect', true));
 setSource(store.get('src', 'file'));
