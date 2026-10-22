@@ -37,7 +37,7 @@
   header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
   header img { width: 32px; height: 32px; border-radius: 9px; }
   header h1 { font-size: 18px; font-weight: 700; margin: 0; flex: 1; letter-spacing: -0.01em; }
-  #installCard { font-size: 13px; padding: 6px 12px; }
+  .hbtn { font-size: 13px; padding: 6px 12px; border-radius: 10px; background: var(--soft); text-decoration: none; color: var(--text); white-space: nowrap; }
 
   /* sections */
   section { background: var(--surface); border-radius: 18px; padding: 18px; margin-bottom: 12px; }
@@ -137,7 +137,8 @@
   <header>
     <img src="icons/icon-192.png" alt="">
     <h1>MR 송출기</h1>
-    <button id="installCard" class="hidden"><span id="installBtn">💻 앱으로 설치</span></button>
+    <a class="hbtn" href="https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip" title="VB-Audio 공식 다운로드">⬇ VB-Cable</a>
+    <button id="installCard" class="hbtn hidden"><span id="installBtn">💻 앱으로 설치</span></button>
   </header>
 
   <div id="browserWarn" class="banner">
