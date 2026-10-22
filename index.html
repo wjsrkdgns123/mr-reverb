@@ -100,6 +100,10 @@
         <div class="meter"><i id="meter"></i></div>
       </div>
       <div id="latency" class="hint"></div>
+      <div id="clipWarn" class="hint hidden" style="color:var(--danger)">
+        ⚠ 마이크 입력이 너무 커서 소리가 깨지고 있어요. <b>오디오 인터페이스 게인</b>이나
+        Windows 마이크 볼륨(설정 → 소리 → 입력)을 조금 낮춰 주세요. 대신 아래 "내 목소리" 슬라이더를 올리면 돼요.
+      </div>
       <p class="hint">지연을 줄이려면: 장치 설정의 헤드폰을 <b>"기본값"이나 가상 장치(SteelSeries Sonar, NVIDIA Broadcast 등) 말고
         실제 장치</b>로 고르기 · 블루투스 대신 <b>유선 헤드폰</b> · Windows 소리 설정에서 마이크와 헤드폰을
         <b>같은 샘플레이트(예: 48000Hz)</b>로 맞추기</p>
@@ -154,6 +158,8 @@
         <button data-p="hall">홀</button>
         <button data-p="church">성당</button>
       </div>
+      <div class="row" style="margin-bottom:0"><button id="protectBtn">🛡 고음 보호</button></div>
+      <p class="hint">고음을 크게 내도 소리가 덜 깨지게 큰 소리를 부드럽게 눌러 줘요. 켜면 지연이 약 6ms 늘어나요.</p>
     </div>
 
     <div class="card">
@@ -255,17 +261,23 @@ function applyPreset(p) {
 }
 
 // ---- audio graph ----
-//   mic ─┬─ dry ───────────────┐
-//        └─ conv ─ wet ────────┴─ voiceBus ─┬─ sendMix ── MediaStreamDest → <audio sink=CABLE>
-//   mr ─ mrGain ───────────────────────────┼─ sendMix
-//                                           └─ monVoice ─┐
-//   mrGain ─────────────────────────────────── monitor ──┴─ ctx.destination (sink=headphones)
+//   mic ─ hp ─┬─ comp ─ makeup ─┐            (comp = "고음 보호", bypass when off)
+//             └─ bypass ────────┴─ voiceIn ─┬─ dry ──────────┐
+//                                           └─ conv ─ wet ───┴─ voiceBus ─┬─ sendMix ─ limiter → <audio sink=CABLE>
+//   mr ─ mrGain ──────────────────────────────────────────────────────────┼─ sendMix
+//                                                                          └─ monVoice ─┐
+//   mrGain ──────────────────────────────────────────────── monitor ─ softClip ─┴─ ctx.destination (headphones)
 async function start() {
   ctx = new AudioContext({ latencyHint: 'interactive' });
   const n = nodes;
   n.micGain = new GainNode(ctx);
   n.micGain.channelCount = 1; n.micGain.channelCountMode = 'explicit'; // mono voice
   n.hp = new BiquadFilterNode(ctx, { type: 'highpass', frequency: 80 });
+  n.comp = new DynamicsCompressorNode(ctx, { threshold: -20, knee: 12, ratio: 4, attack: 0.003, release: 0.15 });
+  n.makeup = new GainNode(ctx, { gain: 1.6 });
+  n.bypass = new GainNode(ctx);
+  n.voiceIn = new GainNode(ctx);
+  n.softClip = new WaveShaperNode(ctx, { curve: softClipCurve() });
   n.dry = new GainNode(ctx);
   n.conv = new ConvolverNode(ctx);
   n.wet = new GainNode(ctx);
@@ -279,15 +291,17 @@ async function start() {
   analyser = new AnalyserNode(ctx, { fftSize: 1024 });
 
   n.micGain.connect(n.hp);
-  n.hp.connect(n.dry).connect(n.voiceBus);
-  n.hp.connect(n.conv).connect(n.wet).connect(n.voiceBus);
+  n.hp.connect(n.comp).connect(n.makeup).connect(n.voiceIn);
+  n.hp.connect(n.bypass).connect(n.voiceIn);
+  n.voiceIn.connect(n.dry).connect(n.voiceBus);
+  n.voiceIn.connect(n.conv).connect(n.wet).connect(n.voiceBus);
   n.voiceBus.connect(n.sendMix);
   n.mrGain.connect(n.sendMix);
   n.sendMix.connect(n.limiter).connect(n.sendDest);
   n.limiter.connect(analyser);
   n.voiceBus.connect(n.monVoice).connect(n.monitor);
   n.mrGain.connect(n.monitor);
-  n.monitor.connect(ctx.destination);
+  n.monitor.connect(n.softClip).connect(ctx.destination);
 
   sendEl = new Audio();
   sendEl.srcObject = n.sendDest.stream;
@@ -297,16 +311,16 @@ async function start() {
   ctx.createMediaElementSource(mrEl).connect(n.mrGain);
 
   applyPreset(preset);
+  setProtect(store.get('protect', true));
   bindSliders();
+  meterLoop();
+  setInterval(showLatency, 1000);
   await openMic(store.get('mic', 'default'));
-  await fillDevices();
-  sendEl.play().catch(() => {});
+  showLatency();
   // Browsers keep audio suspended until the first click; reflect that in the status line.
   ctx.onstatechange = () => routeOutputs();
-
-  meterLoop();
-  showLatency();
-  setInterval(showLatency, 1000);
+  await fillDevices();
+  sendEl.play().catch(() => {});
 }
 
 // Estimated mic-to-headphone delay: input capture + Web Audio processing + output device.
@@ -333,6 +347,27 @@ async function openMic(deviceId) {
   });
   micSrc = ctx.createMediaStreamSource(micStream);
   micSrc.connect(nodes.micGain);
+  // Raw input tap, before any gain, to detect clipping that happens in the mic/interface itself.
+  nodes.rawAnalyser ??= new AnalyserNode(ctx, { fftSize: 1024, channelCount: 1, channelCountMode: 'explicit', channelInterpretation: 'discrete' });
+  micSrc.connect(nodes.rawAnalyser);
+}
+
+// Linear up to ~0.8, then bends smoothly toward ±1 so peaks round off instead of cracking (no added delay).
+function softClipCurve() {
+  const N = 4096, c = new Float32Array(N), k = 0.8;
+  for (let i = 0; i < N; i++) {
+    const x = (i / (N - 1)) * 2 - 1, a = Math.abs(x);
+    c[i] = a <= k ? x : Math.sign(x) * (k + (1 - k) * Math.tanh((a - k) / (1 - k)));
+  }
+  return c;
+}
+
+function setProtect(on) {
+  store.set('protect', on);
+  nodes.makeup.gain.value = on ? 1.6 : 0;
+  nodes.bypass.gain.value = on ? 0 : 1;
+  $('protectBtn').classList.toggle('on', on);
+  $('protectBtn').textContent = on ? '🛡 고음 보호 켜짐' : '🛡 고음 보호 꺼짐';
 }
 
 const STEREO_RE = /stereo mix|스테레오 믹스|what u hear|wave out mix/i;
@@ -390,8 +425,10 @@ async function routeOutputs() {
   const send = $('sendSel').value, mon = $('monSel').value;
   const stereo = mode === 'stereo';
   const sendIsMon = stereo || send === mon || !send;
-  try { await sendEl.setSinkId(sendIsMon ? '' : send); } catch (e) { console.warn(e); }
-  try { if (ctx.setSinkId) await ctx.setSinkId(mon === 'default' ? '' : mon); } catch (e) { console.warn(e); }
+  // A device switch can stall (e.g. a driver that doesn't answer); don't let it freeze the status line.
+  const settle = (p) => Promise.race([p, new Promise((r) => setTimeout(r, 2000))]).catch((e) => console.warn(e));
+  await settle(sendEl.setSinkId(sendIsMon ? '' : send));
+  if (ctx.setSinkId) await settle(ctx.setSinkId(mon === 'default' ? '' : mon));
   // If the send device is the same as the headphones, don't play the mix twice.
   sendEl.muted = sendIsMon;
   if (ctx.state === 'suspended') {
@@ -427,7 +464,15 @@ function setMonitorVoice(on) {
 
 function meterLoop() {
   const data = new Float32Array(analyser.fftSize);
+  const raw = new Float32Array(1024);
+  let clipUntil = 0;
   const tick = () => {
+    if (nodes.rawAnalyser) {
+      nodes.rawAnalyser.getFloatTimeDomainData(raw);
+      let rp = 0; for (const s of raw) rp = Math.max(rp, Math.abs(s));
+      if (rp >= 0.985) clipUntil = performance.now() + 4000;
+      $('clipWarn').classList.toggle('hidden', performance.now() > clipUntil);
+    }
     analyser.getFloatTimeDomainData(data);
     let peak = 0; for (const s of data) peak = Math.max(peak, Math.abs(s));
     $('meter').style.width = Math.min(100, peak * 100) + '%';
@@ -525,6 +570,7 @@ document.querySelectorAll('#presets button').forEach((b) => b.onclick = () => ap
 document.querySelectorAll('#srcChips button').forEach((b) => b.onclick = () => setSource(b.dataset.src));
 $('tabBtn').onclick = () => connectTab();
 document.querySelectorAll('#modeChips button').forEach((b) => b.onclick = () => setMode(b.dataset.mode));
+$('protectBtn').onclick = () => nodes.makeup && setProtect(!store.get('protect', true));
 setSource(store.get('src', 'file'));
 // Tab-audio capture and AudioContext.setSinkId are Chromium-only (Chrome, Edge, Whale...).
 $('browserWarn').classList.toggle('show', !('setSinkId' in AudioContext.prototype));
