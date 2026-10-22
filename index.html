@@ -369,8 +369,8 @@ async function start() {
   n.micGain = new GainNode(ctx);
   n.micGain.channelCount = 1; n.micGain.channelCountMode = 'explicit'; // mono voice
   n.hp = new BiquadFilterNode(ctx, { type: 'highpass', frequency: 80 });
-  n.comp = new DynamicsCompressorNode(ctx, { threshold: -20, knee: 12, ratio: 4, attack: 0.003, release: 0.15 });
-  n.makeup = new GainNode(ctx, { gain: 1.6 });
+  n.comp = new DynamicsCompressorNode(ctx, COMP_OPTS);
+  n.makeup = new GainNode(ctx, { gain: protectMakeup });
   n.bypass = new GainNode(ctx);
   n.voiceIn = new GainNode(ctx);
   n.softClip = new WaveShaperNode(ctx, { curve: softClipCurve() });
@@ -413,6 +413,7 @@ async function start() {
 
   applyPreset(preset);
   setProtect(store.get('protect', true));
+  calibrateProtect();
   bindSliders();
   meterLoop();
   setInterval(showLatency, 1000);
@@ -461,9 +462,30 @@ function softClipCurve() {
   return c;
 }
 
+// "고음 보호" compressor. Chrome's DynamicsCompressorNode adds its own automatic make-up gain
+// (about +9 dB with these settings), which made the voice louder. protectMakeup cancels it so a
+// normal singing level (-18 dBFS) comes out unchanged and only loud peaks are turned down.
+const COMP_OPTS = { threshold: -20, knee: 12, ratio: 4, attack: 0.003, release: 0.15 };
+let protectMakeup = 0.355; // fallback (≈ -9 dB) until calibration finishes
+
+async function calibrateProtect() {
+  try {
+    const sr = 48000, oc = new OfflineAudioContext(1, sr / 2, sr);
+    const o = new OscillatorNode(oc, { frequency: 440 });
+    const g = new GainNode(oc, { gain: Math.pow(10, -18 / 20) * Math.SQRT2 }); // sine at -18 dBFS RMS
+    o.connect(g).connect(new DynamicsCompressorNode(oc, COMP_OPTS)).connect(oc.destination);
+    o.start();
+    const d = (await oc.startRendering()).getChannelData(0).subarray(sr / 4);
+    let s = 0; for (const x of d) s += x * x;
+    const outDb = 20 * Math.log10(Math.sqrt(s / d.length));
+    if (Number.isFinite(outDb)) protectMakeup = Math.pow(10, (-18 - outDb) / 20);
+  } catch (e) { console.warn('protect calibration failed', e); }
+  setProtect(store.get('protect', true));
+}
+
 function setProtect(on) {
   store.set('protect', on);
-  nodes.makeup.gain.value = on ? 1.6 : 0;
+  nodes.makeup.gain.value = on ? protectMakeup : 0;
   nodes.bypass.gain.value = on ? 0 : 1;
   $('protectBtn').classList.toggle('on', on);
   $('protectBtn').setAttribute('aria-pressed', on);
