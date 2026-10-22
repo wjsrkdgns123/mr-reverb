@@ -61,6 +61,16 @@
   .dot.live { background: var(--accent-2); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 22%, transparent); }
   .meter { height: 4px; background: var(--soft); border-radius: 999px; overflow: hidden; margin-top: 12px; }
   .meter i { display: block; height: 100%; width: 0; background: var(--accent-2); transition: width 60ms linear; }
+  .balance { background: var(--soft); border-radius: 14px; padding: 12px 14px; margin-bottom: 16px; }
+  .lv { display: flex; align-items: center; gap: 10px; font-size: 13px; margin: 4px 0; }
+  .lv span { width: 64px; flex: none; color: var(--sub); }
+  .lv .bar { flex: 1; height: 10px; background: var(--surface); border-radius: 999px; overflow: hidden; }
+  .lv .bar i { display: block; height: 100%; width: 0; border-radius: 999px; transition: width 80ms linear; }
+  #voiceLv { background: var(--accent); }
+  #mrLv { background: var(--accent-2); }
+  #balanceHint { margin-top: 8px; }
+  #balanceHint.good { color: var(--accent-2); }
+  #balanceHint.bad { color: var(--warn); }
   #clipWarn { color: var(--danger); }
 
   /* notices */
@@ -215,6 +225,11 @@
 
     <section>
       <h2>소리</h2>
+      <div class="balance">
+        <div class="lv"><span>🎤 목소리</span><div class="bar"><i id="voiceLv"></i></div></div>
+        <div class="lv"><span>🎵 MR</span><div class="bar"><i id="mrLv"></i></div></div>
+        <p id="balanceHint" class="hint">노래를 부르면서 MR을 틀면 밸런스를 알려드려요</p>
+      </div>
       <div class="slider"><div class="top"><span>내 목소리</span><span class="val" id="voiceVolV"></span></div>
         <input id="voiceVol" type="range" min="0" max="200" value="100" aria-label="내 목소리"></div>
       <div class="slider"><div class="top"><span>MR</span><span class="val" id="mrVolV"></span></div>
@@ -375,6 +390,11 @@ async function start() {
   n.mrGain.connect(n.sendMix);
   n.sendMix.connect(n.limiter).connect(n.sendDest);
   n.limiter.connect(analyser);
+  // Separate taps so the voice/MR balance can be shown side by side.
+  n.voiceAn = new AnalyserNode(ctx, { fftSize: 2048 });
+  n.mrAn = new AnalyserNode(ctx, { fftSize: 2048 });
+  n.voiceBus.connect(n.voiceAn);
+  n.mrGain.connect(n.mrAn);
   n.voiceBus.connect(n.monVoice).connect(n.monitor);
   n.mrGain.connect(n.monitor);
   n.monitor.connect(n.softClip).connect(ctx.destination);
@@ -482,6 +502,11 @@ function setMode(m, save = true) {
   // Stereo Mix already captures a normally playing YouTube tab, so tab capture isn't needed there.
   document.querySelector('#srcChips [data-src="tab"]').classList.toggle('hidden', stereo);
   $('stereoYtHint').classList.toggle('hidden', !stereo);
+  if (bal.diff === null) {
+    $('balanceHint').textContent = stereo
+      ? '스테레오 믹스 모드에서 바로 재생하는 유튜브 MR은 여기 표시되지 않아요 (MR 파일만 표시)'
+      : '노래를 부르면서 MR을 틀면 밸런스를 알려드려요';
+  }
   if (stereo) {
     disconnectTab();
     if (store.get('src', 'file') === 'tab') setSource('file');
@@ -551,6 +576,7 @@ function meterLoop() {
     let peak = 0; for (const s of data) peak = Math.max(peak, Math.abs(s));
     $('meter').style.width = Math.min(100, peak * 100) + '%';
     $('meter').style.background = peak > 0.95 ? 'var(--danger)' : 'var(--accent-2)';
+    updateBalance();
     if (mrEl.duration) {
       if (!seeking) $('seek').value = (mrEl.currentTime / mrEl.duration) * 1000;
       $('time').textContent = fmtT(mrEl.currentTime) + ' / ' + fmtT(mrEl.duration);
@@ -559,6 +585,35 @@ function meterLoop() {
   };
   tick();
 }
+// ---- voice vs MR balance (RMS loudness in dB, smoothed while both are sounding) ----
+const balBuf = new Float32Array(2048);
+const bal = { v: -90, m: -90, diff: null, shown: 0 };
+function rmsDb(an) {
+  an.getFloatTimeDomainData(balBuf);
+  let sum = 0; for (const s of balBuf) sum += s * s;
+  return 20 * Math.log10(Math.sqrt(sum / balBuf.length) + 1e-9);
+}
+const dbToPct = (db) => Math.max(0, Math.min(100, ((db + 60) / 60) * 100));
+function updateBalance() {
+  if (!nodes.voiceAn) return;
+  const v = rmsDb(nodes.voiceAn), m = rmsDb(nodes.mrAn);
+  // fast attack, slow release so bars are readable
+  bal.v = v > bal.v ? v : bal.v * 0.9 + v * 0.1;
+  bal.m = m > bal.m ? m : bal.m * 0.9 + m * 0.1;
+  $('voiceLv').style.width = dbToPct(bal.v) + '%';
+  $('mrLv').style.width = dbToPct(bal.m) + '%';
+  if (v > -45 && m > -45) bal.diff = bal.diff === null ? m - v : bal.diff * 0.98 + (m - v) * 0.02;
+  const now = performance.now();
+  if (bal.diff === null || now - bal.shown < 500) return;
+  bal.shown = now;
+  const el = $('balanceHint');
+  const [cls, msg] = bal.diff > 3 ? ['bad', 'MR이 목소리보다 커요 — MR을 조금 낮춰 보세요']
+    : bal.diff < -14 ? ['bad', 'MR이 너무 작아요 — MR을 조금 올려 보세요']
+    : ['good', '밸런스 좋아요 👍'];
+  el.className = 'hint ' + cls;
+  el.textContent = msg;
+}
+
 const fmtT = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 
 // ---- MR file ----
