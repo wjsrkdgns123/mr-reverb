@@ -741,7 +741,9 @@ function bindSliders() {
   };
   bind('voiceVol', 'voiceVol', (v) => nodes.micGain.gain.value = v / 100, (v) => v + '%');
   bind('mrVol', 'mrVol', (v) => nodes.mrGain.gain.value = v / 100, (v) => v + '%');
-  bind('revAmt', 'revAmt', (v) => { const x = v / 100; nodes.wet.gain.value = x * 1.4; nodes.dry.gain.value = 1 - x * 0.35; }, (v) => v + '%');
+  // The convolver normalises its impulse, so the raw reverb comes out ~20 dB under the dry voice;
+  // ×4.5 puts it about 10 dB under at 30 % and slightly above the dry voice at 100 %.
+  bind('revAmt', 'revAmt', (v) => { const x = v / 100; nodes.wet.gain.value = x * 4.5; nodes.dry.gain.value = 1 - x * 0.35; }, (v) => v + '%');
   setMonitorVoice(monitorVoice);
 }
 
