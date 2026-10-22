@@ -100,11 +100,8 @@
         <div class="meter"><i id="meter"></i></div>
       </div>
       <div id="latency" class="hint"></div>
-      <div class="row" style="margin-bottom:0"><button id="lowLatBtn">⚡ 저지연 모드</button></div>
-      <p class="hint" style="color:var(--warn)">⚠ 저지연 모드를 켜면 내 목소리가 덜 늦게 들리지만,
-        PC 성능에 따라 소리가 <b>지직거리거나 끊길 수 있어요</b>. 끊기면 다시 꺼 주세요.
-        (켜고 끌 때 페이지가 새로 시작됩니다)</p>
-      <p class="hint">지연을 더 줄이려면: 블루투스 대신 <b>유선 헤드폰</b> · Windows 소리 설정에서 마이크와 헤드폰을
+      <p class="hint">지연을 줄이려면: 장치 설정의 헤드폰을 <b>"기본값"이나 가상 장치(SteelSeries Sonar, NVIDIA Broadcast 등) 말고
+        실제 장치</b>로 고르기 · 블루투스 대신 <b>유선 헤드폰</b> · Windows 소리 설정에서 마이크와 헤드폰을
         <b>같은 샘플레이트(예: 48000Hz)</b>로 맞추기</p>
     </div>
 
@@ -264,8 +261,7 @@ function applyPreset(p) {
 //                                           └─ monVoice ─┐
 //   mrGain ─────────────────────────────────── monitor ──┴─ ctx.destination (sink=headphones)
 async function start() {
-  // latencyHint 0 asks for the smallest buffer the device allows (lower delay, but may crackle).
-  ctx = new AudioContext({ latencyHint: store.get('lowLatency', false) ? 0 : 'interactive' });
+  ctx = new AudioContext({ latencyHint: 'interactive' });
   const n = nodes;
   n.micGain = new GainNode(ctx);
   n.micGain.channelCount = 1; n.micGain.channelCountMode = 'explicit'; // mono voice
@@ -319,10 +315,9 @@ function showLatency() {
   const procMs = (ctx.baseLatency ?? 0) * 1000;
   const outMs = (ctx.outputLatency ?? 0) * 1000;
   const total = Math.round(inMs + procMs + outMs);
-  const low = store.get('lowLatency', false);
   $('latency').textContent = total
     ? `예상 지연 약 ${total}ms (입력 ${Math.round(inMs)} + 처리 ${Math.round(procMs)} + 출력 ${Math.round(outMs)})` +
-      (low ? ' · ⚡ 저지연 모드' : '') + ' · 블루투스 헤드폰 지연은 포함되지 않아요'
+      ' · 블루투스 헤드폰 지연은 포함되지 않아요'
     : '';
 }
 
@@ -530,16 +525,6 @@ document.querySelectorAll('#presets button').forEach((b) => b.onclick = () => ap
 document.querySelectorAll('#srcChips button').forEach((b) => b.onclick = () => setSource(b.dataset.src));
 $('tabBtn').onclick = () => connectTab();
 document.querySelectorAll('#modeChips button').forEach((b) => b.onclick = () => setMode(b.dataset.mode));
-(function initLowLatency() {
-  const on = store.get('lowLatency', false);
-  $('lowLatBtn').classList.toggle('on', on);
-  $('lowLatBtn').textContent = on ? '⚡ 저지연 모드 켜짐 (끄기)' : '⚡ 저지연 모드 켜기';
-  // The buffer size is fixed when the AudioContext is created, so a change needs a fresh start.
-  $('lowLatBtn').onclick = () => {
-    store.set('lowLatency', !on);
-    location.reload();
-  };
-})();
 setSource(store.get('src', 'file'));
 // Tab-audio capture and AudioContext.setSinkId are Chromium-only (Chrome, Edge, Whale...).
 $('browserWarn').classList.toggle('show', !('setSinkId' in AudioContext.prototype));
