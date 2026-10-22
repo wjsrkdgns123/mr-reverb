@@ -121,6 +121,31 @@
   .switch.on { background: var(--accent); }
   .switch.on::after { transform: translateX(18px); }
 
+  /* setup guide */
+  details.setup > summary { font-size: 15px; }
+  .setup #cableWarn { margin: 0 0 14px; }
+  .step { display: flex; align-items: center; gap: 10px; margin: 16px 0 8px; font-size: 14.5px; }
+  .step .num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12.5px;
+    font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .step.warn .num { background: var(--warn); }
+  .step.warn b { color: var(--warn); }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 520px) { .opts { grid-template-columns: 1fr; } }
+  .opt { background: var(--soft); border: 2px solid transparent; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; }
+  .opt.on { border-color: var(--accent); }
+  .opt-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 14px; }
+  .opt-sub { color: var(--sub); font-size: 12px; margin: 4px 0 0; }
+  .opt-sub a, .mini-steps a { color: var(--accent); }
+  .badge { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--sub); white-space: nowrap; }
+  .badge.ok { background: color-mix(in srgb, var(--accent-2) 18%, transparent); color: var(--accent-2); font-weight: 600; }
+  .mini-steps { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; }
+  .mini-steps li { margin-bottom: 4px; }
+  .opt .use { margin-top: auto; font-size: 13px; padding: 8px; background: var(--surface); }
+  .opt .mini-steps { margin-bottom: 8px; }
+  .opt.on .use { background: var(--accent); color: #fff; }
+  ul.steps { margin: 0; padding-left: 18px; font-size: 13.5px; }
+  ul.steps li { margin-bottom: 6px; }
+
   /* collapsibles */
   details.fold { background: var(--surface); border-radius: 18px; margin-bottom: 12px; }
   details.fold > summary { list-style: none; cursor: pointer; padding: 16px 18px; font-size: 14px; font-weight: 600;
@@ -147,7 +172,7 @@
   <header>
     <img src="icons/icon-192.png" alt="">
     <h1>MR 송출기</h1>
-    <a class="hbtn" href="https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip" title="VB-Audio 공식 다운로드">⬇ VB-Cable</a>
+    <a class="hbtn" href="guide.html">📖 사용법</a>
     <button id="installCard" class="hbtn hidden"><span id="installBtn">💻 앱으로 설치</span></button>
   </header>
 
@@ -155,24 +180,51 @@
     <b>크롬 또는 엣지로 열어 주세요.</b> 이 브라우저에서는 일부 기능이 동작하지 않아요.
   </div>
 
-  <div id="cableWarn" class="banner">
-    <b>송출 준비가 필요해요</b><br>
-    오버워치로 보내려면 가상 마이크(VB-Cable)를 한 번 설치해 주세요.
-    <div class="acts">
-      <a class="linkbtn btn-primary" href="https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip">⬇ VB-Cable 다운로드</a>
-      <a class="linkbtn" href="guide.html">📖 설치 방법</a>
+  <details class="fold setup" id="setupBox" open>
+    <summary>🚀 처음 한 번만 준비하기</summary>
+    <div class="body">
+      <p id="cableWarn" class="banner">⚠ 아직 송출할 장치가 없어요. 아래 ①에서 하나를 골라 준비해 주세요.</p>
+
+      <div class="step"><span class="num">1</span><b>송출 방법 고르기</b> <span class="hint">(둘 중 하나)</span></div>
+      <div class="opts">
+        <div class="opt" id="optStereo">
+          <div class="opt-top"><b>A. 스테레오 믹스</b><span class="badge" id="stereoBadge"></span></div>
+          <p class="opt-sub">설치 없음 · 대신 PC 소리(게임·디스코드)도 같이 나가요</p>
+          <ol class="mini-steps">
+            <li><kbd>Win</kbd>+<kbd>R</kbd> → <code>mmsys.cpl</code> → <b>[녹음]</b> 탭</li>
+            <li>빈 곳 우클릭 → <b>사용 안 함 장치 표시</b></li>
+            <li><b>스테레오 믹스</b> 우클릭 → <b>사용</b> → 이 창 새로고침(<kbd>F5</kbd>)</li>
+            <li>헤드폰은 <b>메인보드 단자</b>(Realtek)에 꽂기</li>
+          </ol>
+          <p class="opt-sub">⚠ "기본 장치로 설정"은 누르지 마세요</p>
+          <button class="use" data-mode="stereo">이 방법 쓰기</button>
+        </div>
+        <div class="opt" id="optCable">
+          <div class="opt-top"><b>B. VB-Cable</b><span class="badge" id="cableBadge"></span></div>
+          <p class="opt-sub">한 번 설치 · 송출기 소리만 깔끔하게 나가요</p>
+          <ol class="mini-steps">
+            <li><a href="https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip">⬇ 공식 다운로드</a> → 압축 풀기</li>
+            <li><code>VBCABLE_Setup_x64.exe</code> 우클릭 → <b>관리자 권한으로 실행</b></li>
+            <li><b>Install Driver</b> → PC 재시작</li>
+          </ol>
+          <p class="opt-sub"><a href="guide.html">📖 그림 순서대로 자세히 보기</a></p>
+          <button class="use" data-mode="cable">이 방법 쓰기</button>
+        </div>
+      </div>
+
+      <div class="step"><span class="num">2</span><b>오버워치 설정</b></div>
+      <ul class="mini-steps">
+        <li>옵션 → 사운드 → 음성 채팅 <b>입력 장치</b> → <b id="owInput">CABLE Output</b></li>
+        <li>그룹·팀 음성 채팅 → <b>항상 켜기</b></li>
+      </ul>
+
+      <div class="step warn"><span class="num">3</span><b>노래가 끝나면 오버워치 입력을 원래 마이크로 되돌리기</b></div>
+      <p class="hint" style="margin-left:34px">안 되돌리면 팀원에게 내 목소리가 안 들리거나, PC 소리만 들려요.</p>
     </div>
-    <details>
-      <summary>설치 없이 쓰기 (스테레오 믹스)</summary>
-      <p class="hint" style="color:var(--text)"><kbd>Win</kbd>+<kbd>R</kbd> → <code>mmsys.cpl</code> → [녹음] 탭 → 빈 곳 우클릭 "사용 안 함 장치 표시"
-        → "스테레오 믹스" 우클릭 → 사용 → 이 창 새로고침(<kbd>F5</kbd>)</p>
-    </details>
-  </div>
+  </details>
 
   <div id="stereoInfo" class="banner">
-    <b>스테레오 믹스로 송출 중</b><br>
-    오버워치 음성 입력을 <b>스테레오 믹스</b>로 바꾸세요. 헤드폰 소리가 그대로 나가서 내 목소리도 함께 들려요.
-    <p class="hint">헤드폰은 메인보드 단자(Realtek)에 꽂아야 해요. 게임·디스코드 소리도 같이 나가요.</p>
+    <b>스테레오 믹스로 송출 중</b> — 헤드폰으로 들리는 소리가 그대로 나가서 내 목소리도 함께 들려요.
   </div>
 
   <div id="app">
@@ -269,13 +321,15 @@
     </details>
 
     <details class="fold">
-      <summary>오버워치 설정</summary>
+      <summary>문제 해결</summary>
       <div class="body">
-        <ol class="steps">
-          <li>옵션 → 사운드 → 음성 채팅 <b>입력</b> → <b>CABLE Output</b> <span class="hint">(스테레오 믹스 모드면 스테레오 믹스)</span></li>
-          <li>그룹/팀 음성 채팅 → <b>항상 켜기</b></li>
-          <li>노래가 끝나면 입력을 <b>원래 마이크로 되돌리기</b></li>
-        </ol>
+        <ul class="steps">
+          <li><b>팀원에게 안 들림</b>: 오버워치 입력이 CABLE Output(또는 스테레오 믹스)인지, 위 상태가 "송출 중"인지 확인</li>
+          <li><b>CABLE이 안 보임</b>: VB-Cable 설치 후 PC 재시작 → 이 창 새로고침</li>
+          <li><b>스테레오 믹스로 아무것도 안 나감</b>: 헤드폰이 메인보드 단자에 꽂혀 있고, 장치 설정의 헤드폰이 Realtek인지 확인</li>
+          <li><b>목소리가 깨짐</b>: 고음 보호 켜기, 빨간 경고가 뜨면 마이크 게인 낮추기</li>
+          <li><b>하울링(삐-)</b>: 스피커 대신 헤드폰</li>
+        </ul>
       </div>
     </details>
   </div>
@@ -510,7 +564,11 @@ async function fillDevices() {
   if (!store.get('send', null) && cable) store.set('send', cable.deviceId);
   // Prefer the user's saved choice; otherwise VB-Cable if present, else Stereo Mix.
   setMode(store.get('mode', null) ?? (hasCable ? 'cable' : hasStereo ? 'stereo' : 'cable'), false);
-  if (!hasCable && !hasStereo) $('devBox').open = true;
+  for (const [id, ok, yes, no] of [['stereoBadge', hasStereo, '✅ 사용 가능', '꺼져 있음'], ['cableBadge', hasCable, '✅ 설치됨', '미설치']]) {
+    $(id).textContent = ok ? yes : no;
+    $(id).classList.toggle('ok', ok);
+  }
+  if (!hasCable && !hasStereo) $('setupBox').open = true;
   await routeOutputs();
 }
 
@@ -519,6 +577,10 @@ function setMode(m, save = true) {
   if (save) store.set('mode', m);
   const stereo = m === 'stereo';
   document.querySelectorAll('#modeChips button').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
+  $('optStereo').classList.toggle('on', stereo);
+  $('optCable').classList.toggle('on', !stereo);
+  document.querySelectorAll('.opt .use').forEach((b) => { b.textContent = b.dataset.mode === m ? '✓ 사용 중' : '이 방법 쓰기'; });
+  $('owInput').textContent = stereo ? '스테레오 믹스' : 'CABLE Output';
   $('sendRow').classList.toggle('hidden', stereo);
   $('monVoiceRow').classList.toggle('hidden', stereo);
   $('monLabel').textContent = stereo ? '🎧 헤드폰 = 송출 장치 (메인보드 Realtek 단자)' : '🎧 헤드폰';
@@ -725,7 +787,10 @@ document.addEventListener('keydown', (e) => { if (e.code === 'Space' && mrEl?.sr
 document.querySelectorAll('#presets button').forEach((b) => b.onclick = () => applyPreset(b.dataset.p));
 document.querySelectorAll('#srcChips button').forEach((b) => b.onclick = () => setSource(b.dataset.src));
 $('tabBtn').onclick = () => connectTab();
-document.querySelectorAll('#modeChips button').forEach((b) => b.onclick = () => setMode(b.dataset.mode));
+document.querySelectorAll('#modeChips button, .opt .use').forEach((b) => b.onclick = () => nodes.monVoice && setMode(b.dataset.mode));
+// The setup card stays open for first-timers; once folded it remembers that.
+$('setupBox').open = store.get('setupOpen', true);
+$('setupBox').addEventListener('toggle', () => store.set('setupOpen', $('setupBox').open));
 $('protectBtn').onclick = () => nodes.makeup && setProtect(!store.get('protect', true));
 setSource(store.get('src', 'file'));
 // ---- install as a desktop app (PWA) ----

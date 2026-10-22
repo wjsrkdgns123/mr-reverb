@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VB-Cable 설치 매뉴얼 · MR 리버브 송출기</title>
+<title>사용법 · MR 리버브 송출기</title>
 <link rel="icon" href="icons/icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f1115">
@@ -39,80 +39,90 @@
   code, kbd { background: var(--soft); border: 0; border-radius: 6px; padding: 1px 6px; font-size: 13px; }
   ul { padding-left: 20px; margin: 6px 0; }
   a { color: var(--accent); }
+  .tag { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:var(--soft); color:var(--sub); margin-left:6px; font-weight:500; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; margin:8px 0; }
+  td { padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  h3 { font-size:15px; margin:18px 0 8px; }
 </style>
 </head>
 <body>
 <main>
   <p><a href="./" class="btn ghost">← 송출기로 돌아가기</a></p>
-  <h1>📖 VB-Cable 설치 매뉴얼</h1>
-  <p class="sub">VB-Cable은 송출기 소리를 오버워치로 넘겨주는 "가상 마이크"예요. 처음 한 번만 설치하면 됩니다. (약 3분)</p>
+  <h1>📖 사용법</h1>
+  <p class="sub">처음 한 번만 준비하면 다음부터는 송출기를 열고 MR만 틀면 돼요. (약 3분)</p>
 
   <div class="card">
-    <h2>설치 순서</h2>
+    <h2>1. 송출 방법 고르기 <span class="hint">(둘 중 하나)</span></h2>
+    <p class="hint" style="margin-top:0">송출기 소리를 오버워치로 넘겨줄 "마이크 자리"가 필요해요.</p>
+
+    <h3>A. 스테레오 믹스 <span class="tag">설치 없음</span></h3>
+    <p class="hint">헤드폰으로 들리는 소리가 그대로 나가요. 쉽지만 게임·디스코드 소리도 같이 나가요.</p>
     <ol class="steps">
-      <li><b>VB-Cable 다운로드</b><br>
+      <li><b>소리 설정 열기</b><br><kbd>Win</kbd>+<kbd>R</kbd> → <code>mmsys.cpl</code> 입력 → Enter → 위쪽 <b>[녹음]</b> 탭</li>
+      <li><b>상태 확인</b>
+        <table>
+          <tr><td>목록에 <b>안 보임</b></td><td>꺼져서 숨겨진 상태 → 3번으로</td></tr>
+          <tr><td>회색 아이콘 · <b>사용 안 함</b></td><td>꺼져 있음 → 4번으로</td></tr>
+          <tr><td><b>준비</b></td><td>✅ 켜져 있음 → 5번으로</td></tr>
+          <tr><td><b>기본 장치</b></td><td>⚠ 켜져 있지만 다른 프로그램의 기본 마이크가 됨 → 원래 마이크를 우클릭해 "기본 장치로 설정"</td></tr>
+        </table>
+      </li>
+      <li><b>숨은 장치 보이게 하기</b><br>목록 빈 곳 우클릭 → <b>사용 안 함 장치 표시</b> 체크</li>
+      <li><b>켜기</b><br><b>스테레오 믹스</b> 우클릭 → <b>사용</b>
+        <div class="hint warn">⚠ "기본 장치로 설정"은 누르지 마세요. 디스코드 등이 PC 소리를 마이크로 보내게 돼요.</div></li>
+      <li><b>헤드폰 연결</b><br>헤드폰을 <b>메인보드 단자(Realtek)</b>에 꽂아요. 스테레오 믹스는 그 단자로 나가는 소리만 녹음해요.
+        <div class="hint">확인: 유튜브를 틀었을 때 "스테레오 믹스" 옆 초록 막대가 움직이면 정상</div></li>
+      <li><b>송출기 새로고침</b><br>송출기에서 <kbd>F5</kbd> → 자동으로 스테레오 믹스 방식이 선택돼요.</li>
+    </ol>
+    <p class="hint">목록에 스테레오 믹스가 아예 없으면 이 PC의 사운드 드라이버가 지원하지 않는 거예요 → B를 쓰세요.</p>
+
+    <h3>B. VB-Cable <span class="tag">한 번 설치</span></h3>
+    <p class="hint">송출기 소리만 깔끔하게 나가요.</p>
+    <ol class="steps">
+      <li><b>다운로드</b>
         <div class="btns" style="margin-top:6px">
           <a class="btn" href="https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip">⬇ VB-Cable 다운로드 (공식)</a>
           <a class="btn ghost" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">공식 페이지</a>
         </div>
-        <div class="hint" style="margin-top:4px">다운로드가 안 되면 공식 페이지에서 Windows용 "Download"를 누르세요.</div>
       </li>
-      <li><b>압축 풀기</b><br>
-        받은 <code>VBCABLE_Driver_Pack45.zip</code> 우클릭 → <b>"압축 풀기"</b> (또는 "모두 압축 풀기")
-        <div class="hint warn">⚠ zip 안에서 바로 실행하면 설치가 안 돼요. 꼭 압축을 먼저 푸세요.</div>
-      </li>
-      <li><b>관리자 권한으로 실행</b><br>
-        풀린 폴더에서 <code>VBCABLE_Setup_x64.exe</code> 우클릭 → <b>"관리자 권한으로 실행"</b> → "예"
-        <div class="hint">32비트 Windows라면 <code>VBCABLE_Setup.exe</code></div>
-      </li>
-      <li><b>Install Driver 클릭</b><br>
-        창이 뜨면 <b>"Install Driver"</b> → 설치 완료 창이 뜰 때까지 기다리기
-        <div class="hint">중간에 창이 멈춘 것처럼 보여도 기다리면 됩니다.</div>
-      </li>
-      <li><b>PC 재시작</b><br>재시작해야 설치가 마무리돼요.</li>
-      <li><b>송출기 열기</b><br>
-        송출기를 열면 송출 장치가 <b>CABLE Input</b>으로 자동 선택되고, 위쪽에 "송출 중"이 떠요.
-        <div class="hint">안 바뀌면 [장치 설정] → 송출 방식 "가상 마이크" → 송출에서 CABLE Input 선택</div>
-      </li>
-      <li><b>오버워치 설정</b>
-        <ul>
-          <li>옵션 → 사운드 → 음성 채팅 장치 <b>입력</b> → <b>CABLE Output</b></li>
-          <li>그룹/팀 음성 채팅 → <b>항상 켜기(오픈 마이크)</b></li>
-        </ul>
-      </li>
+      <li><b>압축 풀기</b><br>받은 zip 우클릭 → <b>압축 풀기</b>
+        <div class="hint warn">⚠ zip 안에서 바로 실행하면 설치가 안 돼요.</div></li>
+      <li><b>관리자 권한으로 실행</b><br><code>VBCABLE_Setup_x64.exe</code> 우클릭 → <b>관리자 권한으로 실행</b> → 예
+        <div class="hint">32비트 Windows라면 <code>VBCABLE_Setup.exe</code></div></li>
+      <li><b>Install Driver</b> → 완료 창이 뜰 때까지 기다리기</li>
+      <li><b>PC 재시작</b></li>
+      <li><b>송출기 새로고침</b> → 송출 장치가 <b>CABLE Input</b>으로 자동 선택돼요.</li>
     </ol>
   </div>
 
   <div class="card">
-    <h2>⚠ 노래가 끝나면</h2>
-    오버워치 음성 입력 장치를 <b>원래 마이크로 되돌려 주세요.</b><br>
-    CABLE Output으로 둔 채 송출기를 닫으면 팀원에게 내 목소리가 안 들려요.
+    <h2>2. 오버워치 설정</h2>
+    <ul>
+      <li>옵션 → 사운드 → 음성 채팅 <b>입력 장치</b> → A면 <b>스테레오 믹스</b>, B면 <b>CABLE Output</b></li>
+      <li>그룹·팀 음성 채팅 → <b>항상 켜기(오픈 마이크)</b></li>
+    </ul>
   </div>
 
   <div class="card">
-    <h2>설치 없이 쓰기: 스테레오 믹스</h2>
-    PC에 "스테레오 믹스"(주로 메인보드 Realtek 사운드)가 있으면 VB-Cable 없이도 송출돼요.
-    <ul>
-      <li>켜기: <kbd>Win</kbd>+<kbd>R</kbd> → <code>mmsys.cpl</code> → [녹음] 탭 → 빈 곳 우클릭 "사용 안 함 장치 표시" → "스테레오 믹스" 우클릭 → 사용</li>
-      <li>오버워치 입력 장치: <b>스테레오 믹스</b></li>
-      <li>헤드폰은 같은 사운드카드(메인보드 단자)에 연결</li>
-    </ul>
-    <div class="hint warn">헤드폰으로 나오는 소리가 그대로 송출돼서 게임 소리·디스코드 소리도 같이 나가요. 송출기 소리만 깔끔하게 보내려면 VB-Cable을 쓰세요.</div>
+    <h2 class="warn">3. ⚠ 노래가 끝나면</h2>
+    오버워치 음성 입력 장치를 <b>원래 마이크로 되돌려 주세요.</b><br>
+    <span class="hint">안 되돌리면 B는 팀원에게 아무 소리도 안 들리고, A는 내 목소리 대신 PC 소리만 들려요.</span>
   </div>
 
   <div class="card">
     <h2>문제 해결</h2>
     <ul>
-      <li><b>팀원에게 안 들림</b>: 송출기 송출 = CABLE Input, 오버워치 입력 = CABLE Output 인지 확인</li>
+      <li><b>팀원에게 안 들림</b>: 오버워치 입력 장치 확인, 송출기 위쪽이 "송출 중"인지 확인</li>
       <li><b>송출기에 CABLE이 안 보임</b>: PC 재시작 후 송출기 새로고침(<kbd>F5</kbd>)</li>
-      <li><b>내 목소리가 깨짐</b>: 송출기의 🛡 고음 보호 켜기, 빨간 경고가 뜨면 마이크 게인 낮추기</li>
-      <li><b>하울링(삐-)</b>: 스피커 대신 헤드폰 사용</li>
+      <li><b>스테레오 믹스로 아무것도 안 나감</b>: 헤드폰이 메인보드 단자에 있는지, 송출기 장치 설정의 헤드폰이 Realtek인지</li>
+      <li><b>목소리가 깨짐</b>: 송출기의 고음 보호 켜기, 빨간 경고가 뜨면 마이크 게인 낮추기</li>
+      <li><b>하울링(삐-)</b>: 스피커 대신 헤드폰</li>
     </ul>
   </div>
 
   <div class="card">
     <h2>VB-Cable 지우기</h2>
-    설치할 때 쓴 <code>VBCABLE_Setup_x64.exe</code>를 다시 관리자 권한으로 실행 → <b>"Remove Driver"</b> → PC 재시작
+    설치할 때 쓴 <code>VBCABLE_Setup_x64.exe</code>를 다시 관리자 권한으로 실행 → <b>Remove Driver</b> → PC 재시작
   </div>
 
   <p class="hint" style="text-align:center">VB-Cable은 VB-Audio(<a href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">www.vb-cable.com</a>)의 기부웨어입니다. 이 사이트는 VB-Audio와 관련이 없습니다.</p>
