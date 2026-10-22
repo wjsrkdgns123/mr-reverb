@@ -92,9 +92,7 @@
     (유튜브 탭 MR, 헤드폰 장치 선택 미지원)
   </div>
 
-  <button id="startBtn" class="primary">▶ 시작하기</button>
-
-  <div id="app" class="hidden">
+  <div id="app">
     <div class="card">
       <div class="status">
         <span id="liveDot" class="dot"></span>
@@ -307,9 +305,9 @@ async function start() {
   await openMic(store.get('mic', 'default'));
   await fillDevices();
   sendEl.play().catch(() => {});
+  // Browsers keep audio suspended until the first click; reflect that in the status line.
+  ctx.onstatechange = () => routeOutputs();
 
-  $('startBtn').classList.add('hidden');
-  $('app').classList.remove('hidden');
   meterLoop();
   showLatency();
   setInterval(showLatency, 1000);
@@ -401,6 +399,11 @@ async function routeOutputs() {
   try { if (ctx.setSinkId) await ctx.setSinkId(mon === 'default' ? '' : mon); } catch (e) { console.warn(e); }
   // If the send device is the same as the headphones, don't play the mix twice.
   sendEl.muted = sendIsMon;
+  if (ctx.state === 'suspended') {
+    $('liveDot').classList.remove('live');
+    $('liveText').textContent = '🔇 화면 아무 곳이나 클릭하면 소리가 켜져요';
+    return;
+  }
   const live = stereo ? hasStereo : !sendIsMon;
   $('liveDot').classList.toggle('live', live);
   $('liveText').textContent = stereo
@@ -499,9 +502,15 @@ function disconnectTab() {
 }
 
 // ---- events ----
-$('startBtn').onclick = () => start().catch((e) => {
-  alert('마이크를 열 수 없습니다: ' + e.message + '\n브라우저 주소창 왼쪽 자물쇠에서 마이크 권한을 허용해 주세요.');
+start().catch((e) => {
+  console.error(e);
+  $('liveText').textContent = '🎙 마이크를 쓸 수 없어요 — 주소창 왼쪽 자물쇠에서 마이크를 "허용"한 뒤 새로고침(F5) 해 주세요';
 });
+const unlockAudio = () => {
+  if (ctx?.state === 'suspended') ctx.resume();
+  sendEl?.play().catch(() => {});
+};
+['pointerdown', 'keydown'].forEach((t) => addEventListener(t, unlockAudio));
 $('drop').onclick = () => $('file').click();
 $('changeBtn').onclick = () => $('file').click();
 $('file').onchange = (e) => loadFile(e.target.files[0]);
