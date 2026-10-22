@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>후원 · MR 리버브 송출기</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f1115">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --soft: #eef0f4; --text: #15171c; --sub: #6b7280; --accent: #4f6bff; --accent-2: #18b47b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1115; --panel: #171a20; --soft: #20242c; --text: #eceef2; --sub: #8b93a3; --accent: #7088ff; --accent-2: #3ddc97; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.65 "Pretendard Variable", Pretendard, "Malgun Gothic", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 480px; margin: 0 auto; padding: 24px 16px 48px; }
+  .back { display: inline-block; text-decoration: none; color: var(--text); background: var(--soft); border-radius: 10px; padding: 8px 14px; font-size: 14px; }
+  .card { background: var(--panel); border-radius: 18px; padding: 28px 20px; margin-top: 20px; text-align: center; }
+  .heart { font-size: 44px; line-height: 1; }
+  h1 { font-size: 21px; margin: 12px 0 6px; }
+  .lead { color: var(--sub); font-size: 14px; margin: 0 auto; max-width: 34ch; }
+  .list { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+  .list a, .list button { display: block; text-decoration: none; font: inherit; font-size: 15px; font-weight: 600; color: var(--text);
+    background: var(--soft); border: 0; border-radius: 14px; padding: 14px; cursor: pointer; }
+  .list a:hover, .list button:hover { filter: brightness(0.96); }
+  .bank { background: var(--soft); border-radius: 14px; padding: 14px; text-align: left; }
+  .bank .label { font-size: 12.5px; color: var(--sub); }
+  .bank .num { font-size: 15px; font-weight: 600; margin: 2px 0 10px; word-break: keep-all; }
+  .bank button { width: 100%; background: var(--accent); color: #fff; }
+  .empty { color: var(--sub); font-size: 14px; background: var(--soft); border-radius: 14px; padding: 18px; }
+  .note { color: var(--sub); font-size: 12.5px; margin-top: 18px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <a href="./" class="back">← 송출기로 돌아가기</a>
+  <div class="card">
+    <div class="heart">💝</div>
+    <h1>MR 송출기 후원하기</h1>
+    <p class="lead">MR 송출기는 누구나 무료로 쓸 수 있어요. 도움이 됐다면 커피 한 잔으로 응원해 주세요. 더 좋은 기능을 만드는 데 쓸게요.</p>
+
+    <div class="list" id="list"></div>
+    <p class="empty hidden" id="empty">후원 방법을 준비하고 있어요. 조금만 기다려 주세요 🙏</p>
+
+    <p class="note">후원은 자유예요. 후원하지 않아도 모든 기능을 똑같이 쓸 수 있어요.</p>
+  </div>
+</main>
+
+<script src="links.js"></script>
+<script>
+const L = window.MR_LINKS || {};
+const list = document.getElementById('list');
+for (const [k, label] of window.MR_DONATE_ITEMS || []) {
+  if (!L[k]) continue;
+  list.append(Object.assign(document.createElement('a'), { href: L[k], textContent: label, target: '_blank', rel: 'noopener' }));
+}
+if (L.bank) {
+  const box = document.createElement('div');
+  box.className = 'bank';
+  box.innerHTML = '<div class="label">🏦 계좌로 후원</div><div class="num"></div><button type="button">계좌번호 복사</button>';
+  box.querySelector('.num').textContent = L.bank;
+  const btn = box.querySelector('button');
+  btn.onclick = async () => {
+    try { await navigator.clipboard.writeText(L.bank); btn.textContent = '✓ 복사했어요'; }
+    catch { btn.textContent = '복사가 안 돼요 — 직접 선택해 주세요'; }
+    setTimeout(() => { btn.textContent = '계좌번호 복사'; }, 2000);
+  };
+  list.append(box);
+}
+document.getElementById('empty').classList.toggle('hidden', list.children.length > 0);
+</script>
+</body>
+</html>

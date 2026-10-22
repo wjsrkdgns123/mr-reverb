@@ -173,6 +173,7 @@
     <img src="icons/icon-192.png" alt="">
     <h1>MR 송출기</h1>
     <a class="hbtn" href="guide.html">📖 사용법</a>
+    <a class="hbtn" href="donate.html">💝 후원</a>
     <button id="installCard" class="hbtn hidden"><span id="installBtn">💻 앱으로 설치</span></button>
   </header>
 
@@ -353,25 +354,20 @@
   </footer>
 </main>
 
+<script src="links.js"></script>
 <script>
-// ---- 후원/문의 링크: 비워 두면 해당 버튼이 숨겨집니다 ----
-const LINKS = {
-  toonation: '',   // 투네이션 후원 페이지 주소
-  bmc: '',         // Buy Me a Coffee 주소
-  kakaopay: '',    // 카카오페이 송금 링크 (qr.kakaopay.com/...)
-  toss: '',        // 토스 익명 송금 링크 (toss.me/...)
-  contact: '',     // 문의용 주소 (오픈채팅·디스코드·이메일 mailto: 등)
-};
+// ---- 후원/문의 링크는 links.js 에서 관리 (비워 두면 버튼이 숨겨짐) ----
+const LINKS = window.MR_LINKS || {};
 
 const $ = (id) => document.getElementById(id);
 
 (function renderLinks() {
-  const items = [['toonation', '💜 투네이션'], ['bmc', '☕ Buy Me a Coffee'], ['kakaopay', '💛 카카오페이'], ['toss', '💙 토스']];
-  for (const [k, label] of items) {
+  for (const [k, label] of window.MR_DONATE_ITEMS || []) {
     if (!LINKS[k]) continue;
     const a = Object.assign(document.createElement('a'), { href: LINKS[k], textContent: label, target: '_blank', rel: 'noopener' });
     $('donate').append(a);
   }
+  if (LINKS.bank) $('donate').append(Object.assign(document.createElement('a'), { href: 'donate.html', textContent: '🏦 계좌로 후원' }));
   $('donateBox').classList.toggle('hidden', !$('donate').children.length);
   if (LINKS.contact) {
     $('contact').href = LINKS.contact;
