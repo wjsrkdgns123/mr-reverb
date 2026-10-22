@@ -143,6 +143,8 @@
   .opt .use { margin-top: auto; font-size: 13px; padding: 8px; background: var(--surface); }
   .opt .mini-steps { margin-bottom: 8px; }
   .opt.on .use { background: var(--accent); color: #fff; }
+  .auto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--soft); border-radius: 12px; padding: 10px 12px; }
+  .auto .hint { margin: 0; flex: 1; min-width: 200px; }
   ul.steps { margin: 0; padding-left: 18px; font-size: 13.5px; }
   ul.steps li { margin-bottom: 6px; }
 
@@ -215,6 +217,12 @@
       </div>
 
       <div class="step"><span class="num">2</span><b>Windows 통신 장치 설정</b> <span class="hint">(한 번만)</span></div>
+      <div class="auto">
+        <a class="linkbtn btn-primary" href="MR-auto-setup.bat" download="MR-auto-setup.bat">⚙ 자동 설정 파일 받기</a>
+        <span class="hint">받은 파일 실행 → <b>1</b> 노래 모드 / <b>2</b> 원래대로.
+          "Windows의 PC 보호" 창이 뜨면 <b>추가 정보 → 실행</b>.</span>
+      </div>
+      <p class="hint" style="margin:8px 0 0">직접 하려면:</p>
       <ol class="mini-steps">
         <li><kbd>Win</kbd>+<kbd>R</kbd> → <code>mmsys.cpl</code> → <b>[녹음]</b> 탭</li>
         <li><b id="owInput">CABLE Output</b> 우클릭 → <b>기본 통신 장치로 설정</b> <span class="hint">("기본 장치로 설정" 아님!)</span></li>
