@@ -70,8 +70,18 @@
   <h1>🎤 MR 리버브 송출기</h1>
   <p class="sub">마이크 + 리버브 + MR을 섞어서 오버워치 음성채팅으로 보냅니다.</p>
 
+  <div id="stereoInfo" class="banner warn">
+    <b>스테레오 믹스 모드로 동작 중이에요.</b> 설치 없이 송출돼요.
+    오버워치 음성 입력 장치를 <b>스테레오 믹스</b>로 바꾸세요.
+    <br><small>헤드폰으로 들리는 소리가 그대로 송출돼서 내 목소리도 함께 들려요.
+    헤드폰을 <b>스테레오 믹스와 같은 사운드카드</b>(보통 Realtek, 메인보드 단자)에 꽂아야 해요.</small>
+  </div>
+
   <div id="cableWarn" class="banner warn">
-    <b>VB-Cable이 설치되어 있지 않아요.</b> 오버워치로 보내려면 한 번 설치가 필요합니다.
+    <b>송출할 장치가 없어요.</b> 둘 중 하나가 필요해요.
+    <br>① <b>스테레오 믹스 켜기 (설치 없음)</b>: Win+R → <code>mmsys.cpl</code> → [녹음] 탭 → 빈 곳 우클릭 "사용 안 함 장치 표시"
+    → "스테레오 믹스" 우클릭 → 사용 → 이 창 새로고침(F5)
+    <br>② <b>VB-Cable 설치</b>:
     <a href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">공식 페이지 열기</a> → Windows용 다운로드 → 압축 풀기 →
     <b>VBCABLE_Setup_x64.exe</b> 우클릭 "관리자 권한으로 실행" → Install Driver → PC 재시작 → 이 창 새로고침(F5)
     <br><small>VB-Cable은 VB-Audio(www.vb-cable.com)의 기부웨어입니다.</small>
@@ -144,10 +154,16 @@
     <div class="card">
       <details id="devBox">
         <summary>장치 설정 (처음 한 번만)</summary>
+        <div class="dev"><span>송출 방식</span>
+          <div class="chips" id="modeChips">
+            <button data-mode="cable">가상 마이크 (VB-Cable·오인페 루프백)</button>
+            <button data-mode="stereo">스테레오 믹스</button>
+          </div>
+        </div>
         <div class="dev"><span>🎙 마이크</span><select id="micSel"></select></div>
-        <div class="dev"><span>📡 송출 (오버워치로) — 보통 "CABLE Input"</span><select id="sendSel"></select></div>
-        <div class="dev"><span>🎧 내 헤드폰</span><select id="monSel"></select></div>
-        <div class="row"><button id="monVoiceBtn">내 목소리도 헤드폰으로 듣기</button></div>
+        <div class="dev" id="sendRow"><span>📡 송출 (오버워치로) — 보통 "CABLE Input"</span><select id="sendSel"></select></div>
+        <div class="dev"><span id="monLabel">🎧 내 헤드폰</span><select id="monSel"></select></div>
+        <div class="row" id="monVoiceRow"><button id="monVoiceBtn">내 목소리도 헤드폰으로 듣기</button></div>
         <p class="hint">스피커를 쓰면 하울링이 날 수 있어요. 헤드폰을 쓰세요.</p>
       </details>
     </div>
@@ -156,7 +172,8 @@
       <details>
         <summary>오버워치 설정 방법</summary>
         <ol class="hint" style="font-size:13px;padding-left:18px">
-          <li>옵션 → 사운드 → <b>음성 채팅 장치: 입력</b>을 <b>CABLE Output</b> 으로</li>
+          <li>옵션 → 사운드 → <b>음성 채팅 장치: 입력</b>을 <b>CABLE Output</b> 으로
+            (스테레오 믹스 모드면 <b>스테레오 믹스</b>)</li>
           <li><b>그룹/팀 음성 채팅 모드</b>를 <b>항상 켜기(오픈 마이크)</b> 로</li>
           <li>팀원에게 MR이 너무 크면 위의 MR 슬라이더를 낮추세요</li>
         </ol>
@@ -299,20 +316,42 @@ async function openMic(deviceId) {
   micSrc.connect(nodes.micGain);
 }
 
+const STEREO_RE = /stereo mix|스테레오 믹스|what u hear|wave out mix/i;
+let mode = 'cable';
+let hasCable = false, hasStereo = false;
+
 async function fillDevices() {
   const devs = await navigator.mediaDevices.enumerateDevices();
   const ins = devs.filter((d) => d.kind === 'audioinput');
   const outs = devs.filter((d) => d.kind === 'audiooutput');
   const cable = outs.find((d) => /CABLE Input/i.test(d.label));
-  $('cableWarn').classList.toggle('show', !cable);
+  hasCable = !!cable;
+  hasStereo = ins.some((d) => STEREO_RE.test(d.label));
 
-  fill($('micSel'), ins, store.get('mic', 'default'));
+  fill($('micSel'), ins.filter((d) => !STEREO_RE.test(d.label)), store.get('mic', 'default'));
   fill($('sendSel'), outs, store.get('send', cable?.deviceId ?? ''));
   fill($('monSel'), outs.filter((d) => !/CABLE/i.test(d.label)), store.get('mon', 'default'));
 
   if (!store.get('send', null) && cable) store.set('send', cable.deviceId);
-  if (!cable && !store.get('send', null)) $('devBox').open = true;
+  // Prefer the user's saved choice; otherwise VB-Cable if present, else Stereo Mix.
+  setMode(store.get('mode', null) ?? (hasCable ? 'cable' : hasStereo ? 'stereo' : 'cable'), false);
+  if (!hasCable && !hasStereo) $('devBox').open = true;
   await routeOutputs();
+}
+
+function setMode(m, save = true) {
+  mode = m;
+  if (save) store.set('mode', m);
+  const stereo = m === 'stereo';
+  document.querySelectorAll('#modeChips button').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
+  $('sendRow').classList.toggle('hidden', stereo);
+  $('monVoiceRow').classList.toggle('hidden', stereo);
+  $('monLabel').textContent = stereo ? '🎧 헤드폰 = 송출 장치 (스테레오 믹스와 같은 사운드카드, 보통 Realtek)' : '🎧 내 헤드폰';
+  $('stereoInfo').classList.toggle('show', stereo && hasStereo);
+  $('cableWarn').classList.toggle('show', stereo ? !hasStereo : !hasCable && !hasStereo);
+  // In Stereo Mix mode whatever plays on the headphones is what gets sent, so the voice must always be in it.
+  nodes.monVoice.gain.value = stereo || monitorVoice ? 1 : 0;
+  if (ctx) routeOutputs();
 }
 
 function fill(sel, list, chosen) {
@@ -323,14 +362,17 @@ function fill(sel, list, chosen) {
 
 async function routeOutputs() {
   const send = $('sendSel').value, mon = $('monSel').value;
-  const sendIsMon = send === mon || !send;
+  const stereo = mode === 'stereo';
+  const sendIsMon = stereo || send === mon || !send;
   try { await sendEl.setSinkId(sendIsMon ? '' : send); } catch (e) { console.warn(e); }
   try { if (ctx.setSinkId) await ctx.setSinkId(mon === 'default' ? '' : mon); } catch (e) { console.warn(e); }
   // If the send device is the same as the headphones, don't play the mix twice.
   sendEl.muted = sendIsMon;
-  const live = !sendIsMon && /CABLE/i.test($('sendSel').selectedOptions[0]?.text ?? '');
+  const live = stereo ? hasStereo : !sendIsMon;
   $('liveDot').classList.toggle('live', live);
-  $('liveText').textContent = live ? '송출 중 → ' + $('sendSel').selectedOptions[0].text : '송출 장치를 선택하세요 (CABLE Input)';
+  $('liveText').textContent = stereo
+    ? (hasStereo ? '스테레오 믹스로 송출 중 → ' + ($('monSel').selectedOptions[0]?.text ?? '') : '스테레오 믹스를 켜 주세요')
+    : live ? '송출 중 → ' + $('sendSel').selectedOptions[0].text : '송출 장치를 선택하세요 (CABLE Input 등)';
 }
 
 function bindSliders() {
@@ -347,7 +389,7 @@ function bindSliders() {
 
 function setMonitorVoice(on) {
   monitorVoice = on; store.set('monitorVoice', on);
-  nodes.monVoice.gain.value = on ? 1 : 0;
+  nodes.monVoice.gain.value = on || mode === 'stereo' ? 1 : 0;
   $('monVoiceBtn').classList.toggle('on', on);
   $('monVoiceBtn').textContent = on ? '🎧 내 목소리 듣는 중 (끄기)' : '내 목소리도 헤드폰으로 듣기';
 }
@@ -445,6 +487,7 @@ document.addEventListener('keydown', (e) => { if (e.code === 'Space' && mrEl?.sr
 document.querySelectorAll('#presets button').forEach((b) => b.onclick = () => applyPreset(b.dataset.p));
 document.querySelectorAll('#srcChips button').forEach((b) => b.onclick = () => setSource(b.dataset.src));
 $('tabBtn').onclick = () => connectTab();
+document.querySelectorAll('#modeChips button').forEach((b) => b.onclick = () => setMode(b.dataset.mode));
 setSource(store.get('src', 'file'));
 // Tab-audio capture and AudioContext.setSinkId are Chromium-only (Chrome, Edge, Whale...).
 $('browserWarn').classList.toggle('show', !('setSinkId' in AudioContext.prototype));
