@@ -42,7 +42,11 @@
   .tag { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:var(--soft); color:var(--sub); margin-left:6px; font-weight:500; }
   table { width:100%; border-collapse:collapse; font-size:13.5px; margin:8px 0; }
   td { padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
-  h3 { font-size:15px; margin:18px 0 8px; }
+  h3 { font-size:15px; margin:18px 0 8px; scroll-margin-top: 16px; }
+  .mfr { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
+  .mfr .hint { width:64px; }
+  .mfr a { text-decoration:none; color:var(--text); background:var(--soft); border-radius:8px; padding:5px 10px; font-size:13px; }
+  .mfr a:hover { color:var(--accent); }
 </style>
 </head>
 <body>
@@ -74,7 +78,52 @@
         <div class="hint">확인: 유튜브를 틀었을 때 "스테레오 믹스" 옆 초록 막대가 움직이면 정상</div></li>
       <li><b>송출기 새로고침</b><br>송출기에서 <kbd>F5</kbd> → 자동으로 스테레오 믹스 방식이 선택돼요.</li>
     </ol>
-    <p class="hint">목록에 스테레오 믹스가 아예 없으면 이 PC의 사운드 드라이버가 지원하지 않는 거예요 → B를 쓰세요.</p>
+    <p class="hint">목록에 스테레오 믹스가 아예 없으면 Realtek 사운드 드라이버가 없거나 오래된 거예요 → <a href="#realtek">아래 A-1</a>로 드라이버를 설치해 보세요.</p>
+
+    <h3 id="realtek">A-1. 스테레오 믹스가 없을 때: Realtek 드라이버 설치 <span class="tag">무료</span></h3>
+    <p class="hint">Windows가 자동으로 깔아 준 기본 드라이버에는 스테레오 믹스가 없는 경우가 많아요. 제조사 드라이버를 깔면 생기는 경우가 많아요.</p>
+    <ol class="steps">
+      <li><b>Realtek 사운드가 있는지 확인</b><br><kbd>Win</kbd>+<kbd>X</kbd> → <b>장치 관리자</b> → <b>사운드, 비디오 및 게임 컨트롤러</b> 펼치기
+        <table>
+          <tr><td><b>Realtek(R) Audio</b> 또는 <b>Realtek High Definition Audio</b></td><td>✅ 있음 → 2번으로</td></tr>
+          <tr><td>"High Definition Audio 장치"만 있음</td><td>Realtek 칩은 있지만 Windows 기본 드라이버 → 2번으로</td></tr>
+          <tr><td>USB 헤드셋·오디오 인터페이스만 있음</td><td>메인보드 사운드가 없거나 꺼져 있어요 → <b>B. VB-Cable</b>을 쓰세요</td></tr>
+        </table>
+      </li>
+      <li><b>내 PC 모델 확인</b><br><kbd>Win</kbd>+<kbd>R</kbd> → <code>msinfo32</code> → Enter
+        <ul>
+          <li><b>조립 PC(데스크톱)</b>: <b>BaseBoard 제조업체</b>와 <b>BaseBoard 제품</b> (예: ASUS · TUF GAMING B550-PLUS)</li>
+          <li><b>노트북·브랜드 PC</b>: <b>시스템 제조업체</b>와 <b>시스템 모델</b></li>
+        </ul>
+      </li>
+      <li><b>제조사 사이트에서 오디오 드라이버 받기</b><br>모델명을 검색 → <b>드라이버</b> → <b>Audio</b>(Realtek) 받기
+        <div class="mfr">
+          <span class="hint">메인보드</span>
+          <a href="https://www.asus.com/kr/support/download-center/" target="_blank" rel="noopener">ASUS</a>
+          <a href="https://kr.msi.com/support/download" target="_blank" rel="noopener">MSI</a>
+          <a href="https://www.gigabyte.com/kr/Support" target="_blank" rel="noopener">GIGABYTE</a>
+          <a href="https://www.asrock.com/support/index.kr.asp" target="_blank" rel="noopener">ASRock</a>
+        </div>
+        <div class="mfr">
+          <span class="hint">노트북·PC</span>
+          <a href="https://www.samsung.com/sec/support/" target="_blank" rel="noopener">삼성</a>
+          <a href="https://www.lge.co.kr/support/software-firmware" target="_blank" rel="noopener">LG</a>
+          <a href="https://support.hp.com/kr-ko/drivers" target="_blank" rel="noopener">HP</a>
+          <a href="https://www.dell.com/support/home/ko-kr" target="_blank" rel="noopener">Dell</a>
+          <a href="https://pcsupport.lenovo.com/kr/ko" target="_blank" rel="noopener">Lenovo</a>
+          <a href="https://www.asus.com/kr/support/download-center/" target="_blank" rel="noopener">ASUS</a>
+        </div>
+      </li>
+      <li><b>설치하고 PC 재시작</b><br>받은 파일을 실행해 설치 → 재시작 → 위 A의 1번부터 다시 확인</li>
+      <li><b>제조사 드라이버가 없으면</b>
+        <ul>
+          <li>설정 → 업데이트 및 보안 → Windows 업데이트 → <b>선택적 업데이트 보기</b> → 드라이버 업데이트에 Realtek이 있으면 설치</li>
+          <li>마지막 방법: <a href="https://www.realtek.com/Download/List?cate_id=593" target="_blank" rel="noopener">Realtek 공식 범용 드라이버</a> (오래된 버전이라 최신 PC에는 설치가 안 될 수 있어요)</li>
+        </ul>
+      </li>
+    </ol>
+    <p class="hint warn">⚠ 드라이버는 꼭 위 <b>공식 사이트</b>에서만 받으세요. "드라이버 자동 설치" 프로그램이나 모음 사이트는 광고·악성코드가 섞여 있는 경우가 많아요.</p>
+    <p class="hint">드라이버를 깔아도 스테레오 믹스가 안 생기는 PC도 있어요(제조사가 기능을 빼 둔 경우). 그때는 <b>B. VB-Cable</b>을 쓰세요.</p>
 
     <h3>B. VB-Cable <span class="tag">한 번 설치</span></h3>
     <p class="hint">송출기 소리만 깔끔하게 나가요.</p>
