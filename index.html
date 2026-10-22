@@ -197,7 +197,7 @@
             <li><b>스테레오 믹스</b> 우클릭 → <b>사용</b> → 이 창 새로고침(<kbd>F5</kbd>)</li>
             <li>헤드폰은 <b>메인보드 단자</b>(Realtek)에 꽂기</li>
           </ol>
-          <p class="opt-sub">⚠ "기본 장치로 설정"은 누르지 마세요</p>
+          <p class="opt-sub">⚠ "기본 장치로 설정"은 누르지 마세요 (아래 ②에서 "기본 통신 장치"로 정해요)</p>
           <p class="opt-sub">목록에 없나요? <a href="guide.html#realtek">Realtek 드라이버 설치 방법</a></p>
           <button class="use" data-mode="stereo">이 방법 쓰기</button>
         </div>
@@ -214,14 +214,21 @@
         </div>
       </div>
 
-      <div class="step"><span class="num">2</span><b>오버워치 설정</b></div>
+      <div class="step"><span class="num">2</span><b>Windows 통신 장치 설정</b> <span class="hint">(한 번만)</span></div>
+      <ol class="mini-steps">
+        <li><kbd>Win</kbd>+<kbd>R</kbd> → <code>mmsys.cpl</code> → <b>[녹음]</b> 탭</li>
+        <li><b id="owInput">CABLE Output</b> 우클릭 → <b>기본 통신 장치로 설정</b> <span class="hint">("기본 장치로 설정" 아님!)</span></li>
+        <li><b>[통신]</b> 탭 → <b>아무 작업도 안 함</b> → 확인 <span class="hint">(안 하면 노래할 때 MR·게임 소리가 작아져요)</span></li>
+      </ol>
+
+      <div class="step"><span class="num">3</span><b>오버워치 설정</b></div>
       <ul class="mini-steps">
-        <li>옵션 → 사운드 → 음성 채팅 <b>입력 장치</b> → <b id="owInput">CABLE Output</b></li>
-        <li>그룹·팀 음성 채팅 → <b>항상 켜기</b></li>
+        <li>옵션 → 사운드 → 캡처 → <b>음성 대화 장치</b> → <b>대화 장치</b></li>
+        <li><b>음성 대화 말하기 방식</b> → <b>오픈 마이크</b></li>
       </ul>
 
-      <div class="step warn"><span class="num">3</span><b>노래가 끝나면 오버워치 입력을 원래 마이크로 되돌리기</b></div>
-      <p class="hint" style="margin-left:34px">안 되돌리면 팀원에게 내 목소리가 안 들리거나, PC 소리만 들려요.</p>
+      <div class="step warn"><span class="num">4</span><b>노래가 끝나면 오버워치 음성 대화 장치를 "기본 장치"로</b></div>
+      <p class="hint" style="margin-left:34px">원래 마이크로 돌아가요. 다음에 노래할 땐 다시 "대화 장치"로만 바꾸면 돼요.</p>
     </div>
   </details>
 
@@ -330,7 +337,9 @@
       <summary>문제 해결</summary>
       <div class="body">
         <ul class="steps">
-          <li><b>팀원에게 안 들림</b>: 오버워치 입력이 CABLE Output(또는 스테레오 믹스)인지, 위 상태가 "송출 중"인지 확인</li>
+          <li><b>팀원에게 안 들림</b>: 오버워치 음성 대화 장치가 "대화 장치"인지, Windows 녹음 탭에서 CABLE Output(또는 스테레오 믹스)이 "기본 통신 장치"인지, 위 상태가 "송출 중"인지 확인</li>
+          <li><b>노래할 때 MR·게임 소리가 작아짐</b>: <code>mmsys.cpl</code> → [통신] 탭 → "아무 작업도 안 함"</li>
+          <li><b>다른 통화 프로그램 마이크가 이상해짐</b>: 녹음 탭에서 원래 마이크를 다시 "기본 통신 장치로 설정" (노래할 때만 바꿔도 돼요)</li>
           <li><b>CABLE이 안 보임</b>: VB-Cable 설치 후 PC 재시작 → 이 창 새로고침</li>
           <li><b>내 목소리가 헤드폰으로 안 들림</b>: 위쪽 "🎧 듣는 곳"이 실제 헤드폰인지 확인하고 아니면 [바꾸기], 장치 설정의 "내 목소리 듣기"가 켜져 있는지 확인</li>
           <li><b>VB-Cable 설치 후 PC 소리가 다 안 들림</b>: 작업 표시줄 🔊 → 출력 장치를 헤드폰으로 (VB-Cable이 기본 스피커를 바꿔 놓은 것)</li>
