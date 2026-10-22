@@ -109,6 +109,9 @@
         <button data-src="file">🎵 파일</button>
         <button data-src="tab">▶ 유튜브 탭</button>
       </div>
+      <p id="stereoYtHint" class="hint hidden" style="margin:-4px 0 12px">
+        💡 스테레오 믹스 모드에서는 유튜브 MR을 <b>그냥 재생하면</b> 그대로 송출돼요. (볼륨은 유튜브에서 조절)
+      </p>
       <div id="tabBox" class="hidden">
         <button id="tabBtn" style="width:100%">유튜브 탭 연결하기</button>
         <div id="tabStatus" class="hint"></div>
@@ -351,6 +354,13 @@ function setMode(m, save = true) {
   $('cableWarn').classList.toggle('show', stereo ? !hasStereo : !hasCable && !hasStereo);
   // In Stereo Mix mode whatever plays on the headphones is what gets sent, so the voice must always be in it.
   nodes.monVoice.gain.value = stereo || monitorVoice ? 1 : 0;
+  // Stereo Mix already captures a normally playing YouTube tab, so tab capture isn't needed there.
+  document.querySelector('#srcChips [data-src="tab"]').classList.toggle('hidden', stereo);
+  $('stereoYtHint').classList.toggle('hidden', !stereo);
+  if (stereo) {
+    disconnectTab();
+    if (store.get('src', 'file') === 'tab') setSource('file');
+  }
   if (ctx) routeOutputs();
 }
 
