@@ -8,7 +8,9 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="MR 리버브 송출기 — 게임 음성채팅 노래방">
 <meta property="og:description" content="마이크 리버브 + MR(파일·유튜브)을 섞어 게임 음성채팅으로. 무료, 브라우저에서 바로.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#111318">
 <style>
   :root {
     --bg: #111318; --panel: #1b1e26; --line: #2a2f3a; --text: #e8eaf0; --sub: #9aa1b1;
@@ -69,6 +71,14 @@
 <main>
   <h1>🎤 MR 리버브 송출기</h1>
   <p class="sub">마이크 + 리버브 + MR을 섞어서 오버워치 음성채팅으로 보냅니다.</p>
+
+  <div id="installCard" class="card hidden" style="display:flex;align-items:center;gap:12px">
+    <div style="flex:1">
+      <b>💻 바탕화면 앱으로 설치</b>
+      <div class="hint" id="installHint" style="margin-top:2px">바탕화면 아이콘으로 바로 실행돼요. 항상 최신 버전으로 열려요.</div>
+    </div>
+    <button id="installBtn" class="on">설치</button>
+  </div>
 
   <div id="stereoInfo" class="banner warn">
     <b>스테레오 믹스 모드로 동작 중이에요.</b> 설치 없이 송출돼요.
@@ -572,6 +582,24 @@ $('tabBtn').onclick = () => connectTab();
 document.querySelectorAll('#modeChips button').forEach((b) => b.onclick = () => setMode(b.dataset.mode));
 $('protectBtn').onclick = () => nodes.makeup && setProtect(!store.get('protect', true));
 setSource(store.get('src', 'file'));
+// ---- install as a desktop app (PWA) ----
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+let installEvt = null;
+const isInstalled = () => matchMedia('(display-mode: standalone)').matches;
+addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installEvt = e;
+  if (!isInstalled()) $('installCard').classList.remove('hidden');
+});
+addEventListener('appinstalled', () => $('installCard').classList.add('hidden'));
+$('installBtn').onclick = async () => {
+  if (!installEvt) return;
+  installEvt.prompt();
+  const { outcome } = await installEvt.userChoice;
+  if (outcome === 'accepted') $('installCard').classList.add('hidden');
+  installEvt = null;
+};
+
 // Tab-audio capture and AudioContext.setSinkId are Chromium-only (Chrome, Edge, Whale...).
 $('browserWarn').classList.toggle('show', !('setSinkId' in AudioContext.prototype));
 $('micSel').onchange = async (e) => { store.set('mic', e.target.value); await openMic(e.target.value); };
