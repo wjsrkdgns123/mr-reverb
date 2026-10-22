@@ -145,6 +145,7 @@
   .opt.on .use { background: var(--accent); color: #fff; }
   .auto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--soft); border-radius: 12px; padding: 10px 12px; }
   .auto .hint { margin: 0; flex: 1; min-width: 200px; }
+  .autoBtn { width: 100%; padding: 12px; font-weight: 600; }
   ul.steps { margin: 0; padding-left: 18px; font-size: 13.5px; }
   ul.steps li { margin-bottom: 6px; }
 
@@ -252,7 +253,8 @@
       </div>
       <div class="meter"><i id="meter"></i></div>
       <p class="hint">🎧 듣는 곳: <b id="monName">-</b><span id="monVoiceOff" class="hidden" style="color:var(--warn)"> · 내 목소리 듣기 꺼짐</span>
-        · <a href="#" id="monChange" style="color:var(--accent)">바꾸기</a></p>
+        · <a href="#" id="monChange" style="color:var(--accent)">바꾸기</a>
+        · <a href="#" id="autoLink" style="color:var(--accent)">✨ 장치 자동 설정</a></p>
       <p id="defCableWarn" class="hint hidden" style="color:var(--warn)">⚠ Windows 기본 스피커가 <b>CABLE Input</b>으로 바뀌어 있어요.
         이러면 게임·유튜브 소리가 안 들려요 → 작업 표시줄 🔊 아이콘 클릭 → 출력 장치를 <b>헤드폰</b>으로 바꾸세요.</p>
       <p id="latency" class="hint"></p>
@@ -323,6 +325,8 @@
     <details class="fold" id="devBox">
       <summary>장치 설정</summary>
       <div class="body">
+        <button class="autoBtn btn-primary" id="autoBtn">✨ 자동으로 맞추기</button>
+        <p id="autoResult" class="hint" style="margin:6px 0 14px">마이크·송출·헤드폰을 이 PC에 맞게 한 번에 골라 줘요.</p>
         <div class="field"><span>송출 방식</span>
           <div class="seg" id="modeChips">
             <button data-mode="cable">가상 마이크</button>
@@ -403,6 +407,7 @@ const $ = (id) => document.getElementById(id);
 const store = {
   get(k, d) { try { const v = localStorage.getItem('mrrev.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('mrrev.' + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem('mrrev.' + k); } catch {} },
 };
 
 const PRESETS = { room: { decay: 0.9, pre: 0.008 }, hall: { decay: 2.2, pre: 0.02 }, church: { decay: 4.2, pre: 0.035 } };
@@ -510,7 +515,9 @@ function showLatency() {
   $('latency').title = `입력 ${Math.round(inMs)} + 처리 ${Math.round(procMs)} + 출력 ${Math.round(outMs)}ms (블루투스 헤드폰 지연 제외)`;
 }
 
+let openedMic = null;
 async function openMic(deviceId) {
+  openedMic = deviceId;
   micStream?.getTracks().forEach((t) => t.stop());
   micSrc?.disconnect();
   micStream = await navigator.mediaDevices.getUserMedia({
@@ -583,7 +590,11 @@ async function fillDevices() {
   const defaultIsCable = /CABLE/i.test(outs.find((d) => d.deviceId === 'default')?.label ?? '');
   $('defCableWarn').classList.toggle('hidden', !defaultIsCable);
 
-  fill($('micSel'), ins.filter((d) => !STEREO_RE.test(d.label)), store.get('mic', 'default'));
+  // The send devices must never be used as the mic, or the page would feed its own output back (howling).
+  const micList = ins.filter((d) => !STEREO_RE.test(d.label) && !/CABLE Output/i.test(d.label));
+  const savedMic = store.get('mic', null);
+  fill($('micSel'), micList, micList.some((d) => d.deviceId === savedMic) ? savedMic : pickMic(micList));
+  if ($('micSel').value && $('micSel').value !== openedMic) await openMic($('micSel').value);
   let sendPick = store.get('send', null);
   if (!sendPick || !real({ deviceId: sendPick })) sendPick = cable?.deviceId ?? '';
   fill($('sendSel'), outs.filter(real), sendPick);
@@ -631,6 +642,27 @@ function setMode(m, save = true) {
     if (store.get('src', 'file') === 'tab') setSource('file');
   }
   if (ctx) routeOutputs();
+}
+
+// Best guess for the singer's mic: the Windows default unless it's a loopback of PC sound.
+function pickMic(list) {
+  if (list.some((d) => d.deviceId === 'default')) return 'default';
+  const good = /마이크|mic|microphone|헤드셋|headset/i;
+  const bad = /loop-?back|virtual|voicemeeter|line in|라인 입력|aux/i;
+  const score = (d) => (good.test(d.label) ? 2 : 0) - (bad.test(d.label) ? 3 : 0);
+  return [...list].sort((a, b) => score(b) - score(a))[0]?.deviceId ?? '';
+}
+
+// One click: forget saved device choices and let the smart defaults pick everything again.
+async function autoSetup() {
+  if (!ctx) return;
+  for (const k of ['mic', 'send', 'mon', 'mode']) store.del(k);
+  setMonitorVoice(true);
+  await fillDevices();
+  const name = (id) => ($(id).selectedOptions[0]?.text || '-').replace(/^기본값 - /, '');
+  $('autoResult').textContent = mode === 'stereo'
+    ? `✨ 자동 설정 완료 · 🎙 ${name('micSel')} · 📡 스테레오 믹스 · 🎧 ${name('monSel')}`
+    : `✨ 자동 설정 완료 · 🎙 ${name('micSel')} · 📡 ${hasCable ? name('sendSel') : '송출 장치 없음 (VB-Cable 필요)'} · 🎧 ${name('monSel')}`;
 }
 
 // Best guess for where the user listens: the Windows default if it isn't a virtual cable,
@@ -833,6 +865,12 @@ $('tabBtn').onclick = () => connectTab();
 document.querySelectorAll('#modeChips button, .opt .use').forEach((b) => b.onclick = () => nodes.monVoice && setMode(b.dataset.mode));
 // The setup card stays open for first-timers; once folded it remembers that.
 $('setupBox').open = store.get('setupOpen', true);
+$('autoBtn').onclick = () => autoSetup();
+$('autoLink').onclick = (e) => {
+  e.preventDefault();
+  $('devBox').open = true;
+  autoSetup().then(() => $('autoResult').scrollIntoView({ behavior: 'smooth', block: 'center' }));
+};
 $('monChange').onclick = (e) => {
   e.preventDefault();
   $('devBox').open = true;
