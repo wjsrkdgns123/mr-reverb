@@ -84,6 +84,9 @@
   .transport input { flex: 1; }
   .time { color: var(--sub); font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 76px; text-align: right; }
 
+  .keyrow { display: flex; align-items: center; gap: 6px; }
+  .keyrow input { flex: 1; }
+  .keyrow button { padding: 6px 10px; font-size: 13px; white-space: nowrap; }
   .queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
   .queue li { display: flex; align-items: center; gap: 10px; background: var(--soft); border-radius: 12px; padding: 9px 12px; font-size: 14px; }
   .queue li .n { width: 20px; color: var(--sub); font-variant-numeric: tabular-nums; }
@@ -196,7 +199,7 @@
               <div class="slider"><div class="top"><span>내 목소리</span><span class="val" id="vVal"></span></div><input id="vVol" type="range" min="0" max="200" value="100"></div>
               <div class="slider"><div class="top"><span>MR <small class="hint">듣는 사람에게</small></span><span class="val" id="mVal"></span></div><input id="mVol" type="range" min="0" max="150" value="40"></div>
               <div class="slider"><div class="top"><span>MR <small class="hint">내 헤드폰</small></span><span class="val" id="hVal"></span></div><input id="hVol" type="range" min="0" max="150" value="80"></div>
-              <div class="slider"><div class="top"><span>MR 키</span><span class="val" id="kVal"></span></div><input id="kKey" type="range" min="-6" max="6" step="1" value="0"></div>
+              <div class="slider"><div class="top"><span>MR 키</span><span class="val" id="kVal"></span></div><div class="keyrow"><button type="button" data-key="kKey" data-step="-1">♭ -1</button><input id="kKey" type="range" min="-6" max="6" step="1" value="0" aria-label="MR 키"><button type="button" data-key="kKey" data-step="1">♯ +1</button><button type="button" data-key="kKey" data-step="0">원키</button></div></div>
               <div class="slider"><div class="top"><span>리버브</span><span class="val" id="rVal"></span></div><input id="rAmt" type="range" min="0" max="100" value="30"></div>
               <div class="seg" id="presetSeg">
                 <button data-p="room">방</button><button data-p="hall" class="on">홀</button><button data-p="church">성당</button>

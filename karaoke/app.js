@@ -249,7 +249,7 @@ function initSingerControls() {
   bind('vVol', 'vVol', 100, (v) => engine.setVoice(v / 100), (v) => v + '%');
   bind('mVol', 'mSend', 40, (v) => engine.setMr(v / 100), (v) => v + '%');
   bind('hVol', 'mMon', 80, (v) => engine.setMrMonitor(v / 100), (v) => v + '%');
-  bind('kKey', 'mKey', 0, (v) => engine.setKey(v), (v) => (v > 0 ? '+' : '') + v + (v ? '키' : ' (원키)'));
+  bind('kKey', 'mKey', 0, (v) => engine.setKey(v), (v) => (v === 0 ? '원키' : (v > 0 ? '+' : '−') + Math.abs(v) + '키 (반음 ' + Math.abs(v) + '개 ' + (v > 0 ? '↑' : '↓') + ')'));
   bind('rAmt', 'rAmt', 30, (v) => engine.setReverb(v / 100), (v) => v + '%');
   bind('lVol', 'lVol', 100, (v) => peers.forEach((p) => { p.el.volume = v / 100; }), (v) => v + '%');
 
@@ -311,6 +311,13 @@ function initSingerControls() {
     }
   };
   $('endBtn').onclick = () => send({ t: 'end_sing' });
+  // ♭/♯ buttons: exactly one semitone per press (the slider alone is easy to over-drag).
+  document.querySelectorAll("[data-key]").forEach((b) => b.onclick = () => {
+    const s = document.getElementById(b.dataset.key), step = +b.dataset.step;
+    s.value = step ? Math.max(-6, Math.min(6, +s.value + step)) : 0;
+    s.dispatchEvent(new Event("input"));
+  });
+  
 }
 const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
