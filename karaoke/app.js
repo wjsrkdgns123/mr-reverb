@@ -299,11 +299,11 @@ function initSingerControls() {
   }, 300);
 
   $('tabBtn').onclick = async () => {
-    if (engine.tab) { engine.disconnectTab(); $('tabBtn').textContent = '유튜브 탭 연결하기'; $('tabBtn').classList.remove('primary'); return; }
+    if (engine.tab) { engine.disconnectTab(); $('tabBtn').textContent = '브라우저 탭 소리 연결'; $('tabBtn').classList.remove('primary'); return; }
     try {
       const s = await engine.connectTab();
       $('tabBtn').textContent = '🔴 연결됨 — 끊기'; $('tabBtn').classList.add('primary');
-      s.getAudioTracks()[0].addEventListener('ended', () => { engine.disconnectTab(); $('tabBtn').textContent = '유튜브 탭 연결하기'; $('tabBtn').classList.remove('primary'); });
+      s.getAudioTracks()[0].addEventListener('ended', () => { engine.disconnectTab(); $('tabBtn').textContent = '브라우저 탭 소리 연결'; $('tabBtn').classList.remove('primary'); });
     } catch (e) {
       if (e.message === 'no-tab-audio') toast('"탭 오디오도 공유"를 체크해 주세요', 4000);
     }

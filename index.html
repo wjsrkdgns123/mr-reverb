@@ -7,7 +7,7 @@
 <meta name="description" content="마이크에 리버브를 넣고 MR과 섞어서 오버워치·게임 음성채팅으로 송출. 설치 없이 브라우저에서 바로, 무료.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="MR 리버브 송출기 — 게임 음성채팅 노래방">
-<meta property="og:description" content="마이크 리버브 + MR(파일·유튜브)을 섞어 게임 음성채팅으로. 무료, 브라우저에서 바로.">
+<meta property="og:description" content="마이크 리버브 + MR(파일·브라우저 탭)을 섞어 게임 음성채팅으로. 무료, 브라우저에서 바로.">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f1115">
@@ -260,7 +260,7 @@
         · <a href="#" id="monChange" style="color:var(--accent)">바꾸기</a>
         · <a href="#" id="autoLink" style="color:var(--accent)">✨ 장치 자동 설정</a></p>
       <p id="defCableWarn" class="hint hidden" style="color:var(--warn)">⚠ Windows 기본 스피커가 <b>CABLE Input</b>으로 바뀌어 있어요.
-        이러면 게임·유튜브 소리가 안 들려요 → 작업 표시줄 🔊 아이콘 클릭 → 출력 장치를 <b>헤드폰</b>으로 바꾸세요.</p>
+        이러면 게임·영상 소리가 안 들려요 → 작업 표시줄 🔊 아이콘 클릭 → 출력 장치를 <b>헤드폰</b>으로 바꾸세요.</p>
       <p id="latency" class="hint"></p>
       <p id="clipWarn" class="hint hidden">⚠ 마이크 입력이 너무 커서 깨지고 있어요. 오디오 인터페이스 게인이나 Windows 마이크 볼륨을 낮추고,
         대신 "내 목소리"를 올려 주세요.</p>
@@ -280,15 +280,15 @@
       <h2>MR</h2>
       <div class="seg" id="srcChips">
         <button data-src="file">파일</button>
-        <button data-src="tab">유튜브</button>
+        <button data-src="tab">브라우저 탭</button>
       </div>
-      <p id="stereoYtHint" class="hint hidden">💡 유튜브 MR은 그냥 재생하면 그대로 송출돼요. 볼륨은 유튜브에서 조절하세요.</p>
+      <p id="stereoYtHint" class="hint hidden">💡 다른 탭에서 재생하는 소리는 그대로 송출돼요. 볼륨은 그 탭에서 조절하세요.</p>
 
       <div id="tabBox" class="hidden">
-        <button id="tabBtn">유튜브 탭 연결하기</button>
+        <button id="tabBtn">브라우저 탭 소리 연결</button>
         <div id="tabStatus" class="hint"></div>
         <ol class="mini">
-          <li>같은 브라우저에서 유튜브 MR을 열어 두기</li>
+          <li>같은 브라우저에서 반주가 나오는 탭을 열어 두기</li>
           <li>버튼 → <b>Chrome 탭</b>에서 그 탭 선택</li>
           <li><b>탭 오디오도 공유</b> 체크 → 공유</li>
         </ol>
@@ -394,7 +394,8 @@
     </div>
     <p>🔒 마이크 소리는 내 PC 안에서만 처리되고 어디에도 전송되지 않아요.</p>
     <p>VB-CABLE은 VB-Audio의 기부웨어이며, 이 사이트는 VB-Audio와 관련이 없습니다.</p>
-    <p id="contactLine" class="hidden">문의: <a id="contact" target="_blank" rel="noopener"></a></p>
+    <p>🎵 MR·음원은 저작권자의 허락을 받았거나 이용 권리가 있는 것만 사용해 주세요.</p>
+    <p id="contactLine" class="hidden">문의·권리 침해 신고: <a id="contact" target="_blank" rel="noopener"></a></p>
   </footer>
 </main>
 
@@ -649,7 +650,7 @@ function setMode(m, save = true) {
   $('stereoYtHint').classList.toggle('hidden', !stereo);
   if (bal.diff === null) {
     $('balanceHint').textContent = stereo
-      ? '스테레오 믹스 모드에서 바로 재생하는 유튜브 MR은 여기 표시되지 않아요 (MR 파일만 표시)'
+      ? '스테레오 믹스 모드에서 다른 탭으로 바로 재생하는 소리는 여기 표시되지 않아요 (MR 파일만 표시)'
       : '노래를 부르면서 MR을 틀면 밸런스를 알려드려요';
   }
   if (stereo) {
@@ -859,7 +860,7 @@ async function connectTab() {
   } catch { return; } // user cancelled the picker
   if (!s.getAudioTracks().length) {
     s.getTracks().forEach((t) => t.stop());
-    alert('탭 소리가 공유되지 않았어요.\n"Chrome 탭"에서 유튜브 탭을 고르고, 아래의 "탭 오디오도 공유"를 꼭 체크해 주세요.');
+    alert('탭 소리가 공유되지 않았어요.\n"Chrome 탭"에서 소리를 가져올 탭을 고르고, 아래의 "탭 오디오도 공유"를 꼭 체크해 주세요.');
     return;
   }
   tabStream = s;
@@ -868,14 +869,14 @@ async function connectTab() {
   s.getAudioTracks()[0].addEventListener('ended', disconnectTab);
   $('tabBtn').textContent = '🔴 연결됨 — 끊기';
   $('tabBtn').classList.add('on');
-  $('tabStatus').textContent = '탭 소리를 MR로 보내는 중입니다. 유튜브 탭에서 재생하세요.';
+  $('tabStatus').textContent = '탭 소리를 MR로 보내는 중입니다. 그 탭에서 재생하세요.';
 }
 
 function disconnectTab() {
   tabSrc?.disconnect();
   tabStream?.getTracks().forEach((t) => t.stop());
   tabStream = tabSrc = null;
-  $('tabBtn').textContent = '유튜브 탭 연결하기';
+  $('tabBtn').textContent = '브라우저 탭 소리 연결';
   $('tabBtn').classList.remove('on');
   $('tabStatus').textContent = '';
 }

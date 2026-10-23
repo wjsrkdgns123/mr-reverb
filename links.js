@@ -6,7 +6,7 @@ window.MR_LINKS = {
   kakaopay: '',    // 카카오페이 송금 링크 (예: https://qr.kakaopay.com/...)
   bmc: '',         // Buy Me a Coffee 주소
   bank: '',        // 계좌 — 통장 묶기 사기 위험이 있어 비워 두는 걸 권장
-  contact: '',     // 문의용 주소 (오픈채팅·디스코드·이메일 mailto: 등)
+  contact: 'mailto:wjsrkdgns123@gmail.com',     // 문의용 주소 (오픈채팅·디스코드·이메일 mailto: 등)
 };
 
 // 위에서부터 순서대로 표시. 첫 번째 항목이 후원 페이지에서 가장 크게 보인다.
