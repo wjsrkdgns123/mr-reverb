@@ -28,6 +28,7 @@ export class SingEngine {
     n.conv = new ConvolverNode(c);
     n.wet = new GainNode(c);
     n.voiceBus = new GainNode(c);
+    n.voiceSend = new GainNode(c); // my voice as listeners hear it (my headphone level is monVoice)
     n.mrIn = new GainNode(c);
     n.mrPost = new GainNode(c);
     n.mrGain = new GainNode(c);
@@ -47,7 +48,7 @@ export class SingEngine {
     n.hp.connect(n.bypass).connect(n.voiceIn);
     n.voiceIn.connect(n.dry).connect(n.voiceBus);
     n.voiceIn.connect(n.conv).connect(n.wet).connect(n.voiceBus);
-    n.voiceBus.connect(n.sendMix);
+    n.voiceBus.connect(n.voiceSend).connect(n.sendMix);
     n.mrGain.connect(n.sendMix);
     n.sendMix.connect(n.limiter).connect(n.out);
     n.voiceBus.connect(n.monVoice).connect(n.monitor);
@@ -55,7 +56,7 @@ export class SingEngine {
     n.mrPost.connect(n.mrGain);
     n.mrPost.connect(n.mrMon).connect(n.monitor);
     n.monitor.connect(n.softClip).connect(c.destination);
-    n.voiceBus.connect(n.voiceAn);
+    n.voiceSend.connect(n.voiceAn);
     n.mrGain.connect(n.mrAn);
 
     this.mrEl = new Audio();
@@ -97,7 +98,9 @@ export class SingEngine {
     }
   }
 
-  setVoice(v) { this.n.micGain.gain.value = v; }
+  setVoice(v) { this.n.voiceSend.gain.value = v; }       // what listeners hear
+  setVoiceMonitor(v) { this.voiceMon = v; this.applyMonitor(); } // what I hear
+  applyMonitor() { this.n.monVoice.gain.value = this.monOn === false ? 0 : (this.voiceMon ?? 1); }
   setMr(v) { this.n.mrGain.gain.value = v; }          // what listeners hear
   setMrMonitor(v) { this.n.mrMon.gain.value = v; }    // what I hear in my headphones
 
@@ -124,7 +127,7 @@ export class SingEngine {
   }
   // Convolver output is ~20 dB under the dry voice; ×4.5 puts it ~10 dB under at 30 %.
   setReverb(x) { this.n.wet.gain.value = x * 4.5; this.n.dry.gain.value = 1 - x * 0.35; }
-  setMonitorVoice(on) { this.n.monVoice.gain.value = on ? 1 : 0; }
+  setMonitorVoice(on) { this.monOn = on; this.applyMonitor(); }
 
   setPreset(p) {
     const { decay, pre } = PRESETS[p] || PRESETS.hall;

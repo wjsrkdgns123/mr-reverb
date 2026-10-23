@@ -247,11 +247,15 @@ function initSingerControls() {
     s.oninput = upd; upd();
   };
   bind('vVol', 'vVol', 100, (v) => engine.setVoice(v / 100), (v) => v + '%');
+  bind('wVol', 'vMon', 100, (v) => engine.setVoiceMonitor(v / 100), (v) => v + '%');
   bind('mVol', 'mSend', 40, (v) => engine.setMr(v / 100), (v) => v + '%');
   bind('hVol', 'mMon', 80, (v) => engine.setMrMonitor(v / 100), (v) => v + '%');
   bind('kKey', 'mKey', 0, (v) => engine.setKey(v), (v) => (v === 0 ? '원키' : (v > 0 ? '+' : '−') + Math.abs(v) + '키 (반음 ' + Math.abs(v) + '개 ' + (v > 0 ? '↑' : '↓') + ')'));
   bind('rAmt', 'rAmt', 30, (v) => engine.setReverb(v / 100), (v) => v + '%');
   bind('lVol', 'lVol', 100, (v) => peers.forEach((p) => { p.el.volume = v / 100; }), (v) => v + '%');
+
+  linkPair('vLink', 'vVol', 'wVol', 'vLinked');
+  linkPair('mLink', 'mVol', 'hVol', 'mLinked');
 
   const preset = store.get('preset', 'hall');
   const setPreset = (p) => {
@@ -318,6 +322,27 @@ function initSingerControls() {
     s.dispatchEvent(new Event("input"));
   });
   
+}
+// 🔗 연동: moving one slider of a pair moves the other by the same amount (keeping their gap).
+function linkPair(btnId, aId, bId, key) {
+  const btn = $(btnId);
+  let on = store.get(key, false), syncing = false;
+  const render = () => { btn.classList.toggle('on', on); btn.textContent = on ? '🔗 연동 켜짐' : '🔗 연동 꺼짐'; };
+  btn.onclick = () => { on = !on; store.set(key, on); render(); };
+  for (const [src, dst] of [[aId, bId], [bId, aId]]) {
+    let prev = +$(src).value;
+    $(src).addEventListener('input', () => {
+      const d = +$(src).value - prev;
+      prev = +$(src).value;
+      if (!on || !d || syncing) return;
+      const t = $(dst);
+      syncing = true;
+      t.value = Math.max(+t.min, Math.min(+t.max, +t.value + d));
+      t.dispatchEvent(new Event('input'));
+      syncing = false;
+    });
+  }
+  render();
 }
 const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 

@@ -145,6 +145,10 @@
   .opt.on .use { background: var(--accent); color: #fff; }
   .auto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--soft); border-radius: 12px; padding: 10px 12px; }
   .auto .hint { margin: 0; flex: 1; min-width: 200px; }
+  .linkrow { display: flex; align-items: center; gap: 8px; margin: -4px 0 14px; }
+  .linkrow .hint { margin: 0; }
+  .pairlink { font-size: 12.5px; padding: 5px 10px; }
+  .pairlink.on { background: var(--accent); color: #fff; }
   .keyrow { display: flex; align-items: center; gap: 6px; }
   .keyrow input { flex: 1; }
   .keyrow button { padding: 6px 10px; font-size: 13px; white-space: nowrap; }
@@ -258,7 +262,6 @@
         <span id="liveDot" class="dot"></span>
         <span id="liveText">준비 중…</span>
       </div>
-      <div class="meter"><i id="meter"></i></div>
       <p class="hint">🎧 듣는 곳: <b id="monName">-</b><span id="monVoiceOff" class="hidden" style="color:var(--warn)"> · 내 목소리 듣기 꺼짐</span>
         · <a href="#" id="monChange" style="color:var(--accent)">바꾸기</a>
         · <a href="#" id="autoLink" style="color:var(--accent)">✨ 장치 자동 설정</a></p>
@@ -322,12 +325,16 @@
         <div class="lv"><span>🎵 MR</span><div class="bar"><i id="mrLv"></i></div></div>
         <p id="balanceHint" class="hint">노래를 부르면서 MR을 틀면 밸런스를 알려드려요</p>
       </div>
-      <div class="slider"><div class="top"><span>내 목소리</span><span class="val" id="voiceVolV"></span></div>
-        <input id="voiceVol" type="range" min="0" max="200" value="100" aria-label="내 목소리"></div>
+      <div class="slider"><div class="top"><span>내 목소리 <small class="hint">팀원에게</small></span><span class="val" id="voiceVolV"></span></div>
+        <input id="voiceVol" type="range" min="0" max="200" value="100" aria-label="내 목소리 송출 크기"></div>
+      <div class="slider" id="voiceMonRow"><div class="top"><span>내 목소리 <small class="hint">내 헤드폰</small></span><span class="val" id="voiceMonV"></span></div>
+        <input id="voiceMon" type="range" min="0" max="200" value="100" aria-label="내 목소리 내 헤드폰 크기"></div>
+      <div class="linkrow" id="voiceLinkRow"><button type="button" class="pairlink" id="voiceLink"></button><span class="hint">켜면 두 크기가 같이 움직여요</span></div>
       <div class="slider"><div class="top"><span>MR <small class="hint">팀원에게</small></span><span class="val" id="mrSendV"></span></div>
         <input id="mrSend" type="range" min="0" max="150" value="40" aria-label="MR 송출 크기"></div>
       <div class="slider" id="mrMonRow"><div class="top"><span>MR <small class="hint">내 헤드폰</small></span><span class="val" id="mrMonV"></span></div>
         <input id="mrMon" type="range" min="0" max="150" value="80" aria-label="MR 내 헤드폰 크기"></div>
+      <div class="linkrow" id="mrLinkRow"><button type="button" class="pairlink" id="mrLink"></button><span class="hint">켜면 두 크기가 같이 움직여요</span></div>
       <div class="slider"><div class="top"><span>MR 키</span><span class="val" id="mrKeyV"></span></div>
         <div class="keyrow"><button type="button" data-key="mrKey" data-step="-1">♭ -1</button><input id="mrKey" type="range" min="-6" max="6" step="1" value="0" aria-label="MR 키"><button type="button" data-key="mrKey" data-step="1">♯ +1</button><button type="button" data-key="mrKey" data-step="0">원키</button></div></div>
       <div class="slider"><div class="top"><span>리버브</span><span class="val" id="revAmtV"></span></div>
@@ -482,6 +489,7 @@ async function start() {
   n.conv = new ConvolverNode(ctx);
   n.wet = new GainNode(ctx);
   n.voiceBus = new GainNode(ctx);
+  n.voiceSend = new GainNode(ctx); // 내 목소리 · 팀원에게 (the headphone level is monVoice)
   n.mrIn = new GainNode(ctx);
   n.mrPost = new GainNode(ctx);
   n.mrGain = new GainNode(ctx);
@@ -499,14 +507,14 @@ async function start() {
   n.hp.connect(n.bypass).connect(n.voiceIn);
   n.voiceIn.connect(n.dry).connect(n.voiceBus);
   n.voiceIn.connect(n.conv).connect(n.wet).connect(n.voiceBus);
-  n.voiceBus.connect(n.sendMix);
+  n.voiceBus.connect(n.voiceSend).connect(n.sendMix);
   n.mrGain.connect(n.sendMix);
   n.sendMix.connect(n.limiter).connect(n.sendDest);
   n.limiter.connect(analyser);
   // Separate taps so the voice/MR balance can be shown side by side.
   n.voiceAn = new AnalyserNode(ctx, { fftSize: 2048 });
   n.mrAn = new AnalyserNode(ctx, { fftSize: 2048 });
-  n.voiceBus.connect(n.voiceAn);
+  n.voiceSend.connect(n.voiceAn); // balance meter compares what teammates hear
   n.mrGain.connect(n.mrAn);
   n.voiceBus.connect(n.monVoice).connect(n.monitor);
   n.mrIn.connect(n.mrPost);
@@ -597,14 +605,46 @@ async function calibrateProtect() {
   setProtect(store.get('protect', true));
 }
 
-// ---- MR: separate headphone level, and key change (SoundTouch, loaded only when first used) ----
-let mrMonLevel = 0.8;
+// ---- separate "to teammates" / "my headphones" levels for voice and MR ----
+// In Stereo Mix mode the headphones *are* the send, so only the teammate level applies there.
+let mrMonLevel = 0.8, voiceSendLevel = 1, voiceMonLevel = 1;
 function applyMrMonitor() {
   if (!nodes.mrMon) return;
   const stereo = mode === 'stereo';
   nodes.mrMon.gain.value = stereo ? 0 : mrMonLevel;
   nodes.mrMonFromSend.gain.value = stereo ? 1 : 0;
   $('mrMonRow').classList.toggle('hidden', stereo);
+  $('mrLinkRow').classList.toggle('hidden', stereo);
+}
+function applyVoiceLevels() {
+  if (!nodes.voiceSend) return;
+  const stereo = mode === 'stereo';
+  nodes.voiceSend.gain.value = voiceSendLevel;
+  nodes.monVoice.gain.value = stereo ? voiceSendLevel : monitorVoice ? voiceMonLevel : 0;
+  $('voiceMonRow').classList.toggle('hidden', stereo);
+  $('voiceLinkRow').classList.toggle('hidden', stereo);
+}
+
+// 🔗 연동: moving one slider of a pair moves the other by the same amount (keeping their gap).
+function linkPair(btnId, aId, bId, key) {
+  const btn = $(btnId);
+  let on = store.get(key, false), syncing = false;
+  const render = () => { btn.classList.toggle('on', on); btn.textContent = on ? '🔗 연동 켜짐' : '🔗 연동 꺼짐'; };
+  btn.onclick = () => { on = !on; store.set(key, on); render(); };
+  for (const [src, dst] of [[aId, bId], [bId, aId]]) {
+    let prev = +$(src).value;
+    $(src).addEventListener('input', () => {
+      const d = +$(src).value - prev;
+      prev = +$(src).value;
+      if (!on || !d || syncing) return;
+      const t = $(dst);
+      syncing = true;
+      t.value = Math.max(+t.min, Math.min(+t.max, +t.value + d));
+      t.dispatchEvent(new Event('input'));
+      syncing = false;
+    });
+  }
+  render();
 }
 
 let keyNode = null, keyLoading = null, wantedKey = 0;
@@ -696,7 +736,7 @@ function setMode(m, save = true) {
   $('stereoInfo').classList.toggle('show', stereo && hasStereo);
   $('cableWarn').classList.toggle('show', stereo ? !hasStereo : !hasCable && !hasStereo);
   // In Stereo Mix mode whatever plays on the headphones is what gets sent, so the voice must always be in it.
-  nodes.monVoice.gain.value = stereo || monitorVoice ? 1 : 0;
+  applyVoiceLevels();
   // Stereo Mix already captures a normally playing YouTube tab, so tab capture isn't needed there.
   document.querySelector('#srcChips [data-src="tab"]').classList.toggle('hidden', stereo);
   $('stereoYtHint').classList.toggle('hidden', !stereo);
@@ -793,26 +833,28 @@ function bindSliders() {
     const update = () => { apply(+el.value); $(id + 'V').textContent = fmt(+el.value); store.set(key, +el.value); };
     el.addEventListener('input', update); update();
   };
-  bind('voiceVol', 'voiceVol', (v) => nodes.micGain.gain.value = v / 100, (v) => v + '%');
+  bind('voiceVol', 'voiceVol', (v) => { voiceSendLevel = v / 100; applyVoiceLevels(); }, (v) => v + '%');
+  bind('voiceMon', 'voiceMon', (v) => { voiceMonLevel = v / 100; applyVoiceLevels(); }, (v) => v + '%');
   bind('mrSend', 'mrSend', (v) => nodes.mrGain.gain.value = v / 100, (v) => v + '%');
   bind('mrMon', 'mrMon', (v) => { mrMonLevel = v / 100; applyMrMonitor(); }, (v) => v + '%');
   bind('mrKey', 'mrKey', (v) => setKey(v), (v) => (v === 0 ? '원키' : (v > 0 ? '+' : '−') + Math.abs(v) + '키 (반음 ' + Math.abs(v) + '개 ' + (v > 0 ? '↑' : '↓') + ')'));
   // The convolver normalises its impulse, so the raw reverb comes out ~20 dB under the dry voice;
   // ×4.5 puts it about 10 dB under at 30 % and slightly above the dry voice at 100 %.
   bind('revAmt', 'revAmt', (v) => { const x = v / 100; nodes.wet.gain.value = x * 4.5; nodes.dry.gain.value = 1 - x * 0.35; }, (v) => v + '%');
+  linkPair('voiceLink', 'voiceVol', 'voiceMon', 'voiceLinked');
+  linkPair('mrLink', 'mrSend', 'mrMon', 'mrLinked');
   setMonitorVoice(monitorVoice);
 }
 
 function setMonitorVoice(on) {
   monitorVoice = on; store.set('monitorVoice', on);
-  nodes.monVoice.gain.value = on || mode === 'stereo' ? 1 : 0;
+  applyVoiceLevels();
   $('monVoiceBtn').classList.toggle('on', on);
   $('monVoiceBtn').setAttribute('aria-pressed', on);
   $('monVoiceOff').classList.toggle('hidden', on || mode === 'stereo');
 }
 
 function meterLoop() {
-  const data = new Float32Array(analyser.fftSize);
   const raw = new Float32Array(1024);
   let clipUntil = 0;
   const tick = () => {
@@ -822,10 +864,6 @@ function meterLoop() {
       if (rp >= 0.985) clipUntil = performance.now() + 4000;
       $('clipWarn').classList.toggle('hidden', performance.now() > clipUntil);
     }
-    analyser.getFloatTimeDomainData(data);
-    let peak = 0; for (const s of data) peak = Math.max(peak, Math.abs(s));
-    $('meter').style.width = Math.min(100, peak * 100) + '%';
-    $('meter').style.background = peak > 0.95 ? 'var(--danger)' : 'var(--accent-2)';
     updateBalance();
     if (mrEl.duration) {
       if (!seeking) $('seek').value = (mrEl.currentTime / mrEl.duration) * 1000;
