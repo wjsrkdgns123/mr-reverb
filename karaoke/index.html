@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>온라인 노래방</title>
+<meta name="description" content="친구들과 방을 만들어 차례대로 노래하고 들려주는 온라인 노래방. 리버브·MR 송출, 채팅, 리액션.">
+<meta property="og:title" content="온라인 노래방 — 같이 부르고 같이 듣자">
+<meta property="og:description" content="방 만들고 링크 공유하면 끝. 설치 없이 브라우저에서 바로.">
+<link rel="icon" href="../mr/icons/icon-192.png">
+<meta name="theme-color" content="#0f1115">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --soft: #eef0f4; --line: #e3e6ec; --seg-on: #ffffff;
+    --text: #15171c; --sub: #6b7280; --accent: #4f6bff; --accent-2: #18b47b; --warn: #b7791f; --warn-bg: #fff7e6; --danger: #e5484d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --surface: #171a20; --soft: #20242c; --line: #262b34; --seg-on: #2e3440;
+      --text: #eceef2; --sub: #8b93a3; --accent: #7088ff; --accent-2: #3ddc97; --warn: #f5b951; --warn-bg: #2a2416; --danger: #ff6b6b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 "Pretendard Variable", Pretendard, "Malgun Gothic", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 56px; }
+  a { color: inherit; }
+  .hidden { display: none !important; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  header h1 { font-size: 19px; margin: 0; flex: 1; }
+  header .sub { color: var(--sub); font-size: 13px; }
+  section, .card { background: var(--surface); border-radius: 18px; padding: 18px; margin-bottom: 12px; }
+  h2 { font-size: 13px; color: var(--sub); font-weight: 600; margin: 0 0 12px; }
+  .hint { color: var(--sub); font-size: 12.5px; margin: 6px 0 0; }
+  button { font: inherit; color: var(--text); background: var(--soft); border: 0; border-radius: 12px; padding: 10px 14px; cursor: pointer; }
+  button:hover { filter: brightness(0.97); }
+  button:disabled { opacity: .5; cursor: default; }
+  .primary { background: var(--accent); color: #fff; font-weight: 600; }
+  .danger { color: var(--danger); }
+  input[type=text] { font: inherit; color: var(--text); background: var(--soft); border: 0; border-radius: 12px; padding: 10px 12px; width: 100%; }
+  select { font: inherit; font-size: 14px; color: var(--text); background: var(--soft); border: 0; border-radius: 10px; padding: 9px; width: 100%; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > input { flex: 1; }
+  .seg { display: flex; background: var(--soft); border-radius: 12px; padding: 3px; gap: 3px; }
+  .seg button { flex: 1; background: transparent; padding: 8px 10px; border-radius: 9px; font-size: 14px; color: var(--sub); }
+  .seg button.on { background: var(--seg-on); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  /* lobby */
+  .rooms { display: grid; gap: 8px; }
+  .room-item { display: flex; align-items: center; gap: 12px; background: var(--soft); border-radius: 14px; padding: 12px 14px; }
+  .room-item .meta { flex: 1; min-width: 0; }
+  .room-item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .room-item .now { color: var(--sub); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .count { font-variant-numeric: tabular-nums; color: var(--sub); font-size: 13px; }
+  .empty { color: var(--sub); text-align: center; padding: 18px; background: var(--soft); border-radius: 14px; font-size: 14px; }
+
+  /* room */
+  .grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; align-items: start; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  .stage { position: relative; text-align: center; padding: 28px 18px; overflow: hidden; }
+  .stage .who { font-size: 22px; font-weight: 700; margin: 6px 0 2px; }
+  .stage .song { color: var(--sub); }
+  .stage .mic { font-size: 40px; }
+  .live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); margin-right: 6px; animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  .bar { height: 8px; background: var(--soft); border-radius: 999px; overflow: hidden; margin-top: 14px; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent-2); transition: width 80ms linear; }
+  .floaters { position: absolute; inset: 0; pointer-events: none; }
+  .floater { position: absolute; bottom: 8px; font-size: 30px; animation: up 2.2s ease-out forwards; }
+  .floater small { display: block; font-size: 11px; color: var(--sub); }
+  @keyframes up { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-180px); opacity: 0; } }
+  .reacts { display: flex; gap: 6px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+  .reacts button { font-size: 20px; padding: 6px 10px; }
+
+  .controls { text-align: left; margin-top: 16px; }
+  .slider { margin-bottom: 12px; }
+  .slider .top { display: flex; justify-content: space-between; font-size: 14px; }
+  .slider .val { color: var(--sub); font-size: 13px; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .drop { display: block; border: 1.5px dashed var(--line); border-radius: 14px; padding: 16px; text-align: center; color: var(--sub); cursor: pointer; margin-top: 10px; }
+  .drop:hover { border-color: var(--accent); color: var(--text); }
+  .transport { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .transport input { flex: 1; }
+  .time { color: var(--sub); font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 76px; text-align: right; }
+
+  .queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .queue li { display: flex; align-items: center; gap: 10px; background: var(--soft); border-radius: 12px; padding: 9px 12px; font-size: 14px; }
+  .queue li .n { width: 20px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .queue li .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .queue li .t small { color: var(--sub); }
+  .queue li button { padding: 4px 8px; font-size: 12px; }
+  .members { display: flex; flex-wrap: wrap; gap: 6px; }
+  .member { background: var(--soft); border-radius: 999px; padding: 5px 10px; font-size: 13px; display: inline-flex; gap: 4px; align-items: center; }
+  .member.me { outline: 2px solid var(--accent); }
+  .member button { padding: 0 4px; background: transparent; font-size: 12px; color: var(--sub); }
+
+  .chat { height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 14px; }
+  .chat .sys { color: var(--sub); font-size: 12.5px; text-align: center; }
+  .chat .nick { font-weight: 600; margin-right: 6px; }
+  .switch-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; }
+  .switch-row .txt { flex: 1; }
+  .switch-row small { display: block; color: var(--sub); font-size: 12px; }
+  .switch { width: 44px; height: 26px; border-radius: 999px; padding: 0; position: relative; background: var(--line); flex: none; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .18s; }
+  .switch.on { background: var(--accent); }
+  .switch.on::after { transform: translateX(18px); }
+  .field { margin-bottom: 10px; }
+  .field > span { display: block; font-size: 12.5px; color: var(--sub); margin-bottom: 4px; }
+  details > summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  .notice { background: var(--warn-bg); border-radius: 12px; padding: 10px 12px; font-size: 13px; margin-top: 10px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg);
+    padding: 10px 16px; border-radius: 12px; font-size: 14px; z-index: 10; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="../mr/icons/icon-192.png" alt="" width="32" height="32" style="border-radius:9px">
+    <h1 id="title">온라인 노래방</h1>
+    <a class="sub" href="../mr/">혼자 송출만 하려면 → MR 송출기</a>
+  </header>
+
+  <!-- 로비 -->
+  <div id="lobby">
+    <section>
+      <h2>내 닉네임</h2>
+      <input id="nick" type="text" maxlength="16" placeholder="닉네임 (최대 16자)">
+    </section>
+    <section>
+      <h2>방 만들기</h2>
+      <div class="row"><input id="roomName" type="text" maxlength="30" placeholder="방 이름 (예: 금요일 노래방)">
+        <button class="primary" id="createBtn">만들기</button></div>
+      <div class="seg" id="pubSeg" style="margin-top:10px">
+        <button data-pub="0" class="on">🔒 링크로만 입장</button>
+        <button data-pub="1">🌐 공개 (로비에 표시)</button>
+      </div>
+      <p class="hint">한 방에 최대 8명. 한 명씩 차례대로 부르고 나머지는 들어요.</p>
+    </section>
+    <section>
+      <div class="row" style="margin-bottom:12px"><h2 style="flex:1;margin:0">공개된 방</h2><button id="refreshBtn" style="padding:6px 10px;font-size:13px">새로고침</button></div>
+      <div class="rooms" id="rooms"></div>
+      <p class="notice">공개 방에서 저작권이 있는 MR·노래를 트는 건 각자 책임이에요. 친구끼리는 <b>링크 방</b>을 추천해요.</p>
+    </section>
+  </div>
+
+  <!-- 입장 (링크로 들어왔을 때) -->
+  <div id="joinView" class="hidden">
+    <section style="text-align:center">
+      <h2 id="joinTitle">노래방에 초대받았어요</h2>
+      <p id="joinInfo" class="hint" style="margin-bottom:14px"></p>
+      <div class="row" style="max-width:420px;margin:0 auto"><input id="joinNick" type="text" maxlength="16" placeholder="닉네임">
+        <button class="primary" id="joinBtn" disabled>입장하기</button></div>
+      <p class="hint">헤드폰을 쓰세요. 스피커로 들으면 다른 사람 소리가 마이크로 다시 들어가요.</p>
+    </section>
+  </div>
+
+  <!-- 방 -->
+  <div id="roomView" class="hidden">
+    <div class="row" style="margin-bottom:12px;flex-wrap:wrap">
+      <button id="copyBtn">🔗 초대 링크 복사</button>
+      <button id="talkBtn">🎙 마이크 꺼짐</button>
+      <span style="flex:1"></span>
+      <button id="leaveBtn" class="danger">나가기</button>
+    </div>
+    <div class="grid">
+      <div>
+        <section class="stage">
+          <div class="floaters" id="floaters"></div>
+          <div id="stageIdle">
+            <div class="mic">🎤</div>
+            <div class="who">무대가 비어 있어요</div>
+            <div class="song">오른쪽에서 예약하면 차례대로 불러요</div>
+          </div>
+          <div id="stageLive" class="hidden">
+            <div class="song"><span class="live-dot"></span>지금 부르는 중</div>
+            <div class="who" id="singerName"></div>
+            <div class="song" id="singerSong"></div>
+            <div class="bar"><i id="liveLevel"></i></div>
+          </div>
+          <div class="reacts" id="reacts"></div>
+
+          <div id="singerControls" class="controls hidden">
+            <div class="seg" id="srcSeg">
+              <button data-src="file" class="on">🎵 MR 파일</button>
+              <button data-src="tab">▶ 유튜브 탭</button>
+            </div>
+            <div id="fileBox">
+              <label class="drop" id="drop">MR 파일을 끌어다 놓거나 눌러서 선택</label>
+              <input id="file" type="file" accept="audio/*" hidden>
+              <div class="transport hidden" id="transport">
+                <button id="playBtn">▶</button>
+                <input id="seek" type="range" min="0" max="1000" value="0">
+                <span class="time" id="time">0:00 / 0:00</span>
+              </div>
+            </div>
+            <div id="tabBox" class="hidden" style="margin-top:10px">
+              <button id="tabBtn" style="width:100%">유튜브 탭 연결하기</button>
+              <p class="hint">같은 브라우저에서 유튜브 MR을 열어 두고 → Chrome 탭 선택 → "탭 오디오도 공유" 체크</p>
+            </div>
+            <div style="margin-top:14px">
+              <div class="slider"><div class="top"><span>내 목소리</span><span class="val" id="vVal"></span></div><input id="vVol" type="range" min="0" max="200" value="100"></div>
+              <div class="slider"><div class="top"><span>MR</span><span class="val" id="mVal"></span></div><input id="mVol" type="range" min="0" max="150" value="60"></div>
+              <div class="slider"><div class="top"><span>리버브</span><span class="val" id="rVal"></span></div><input id="rAmt" type="range" min="0" max="100" value="30"></div>
+              <div class="seg" id="presetSeg">
+                <button data-p="room">방</button><button data-p="hall" class="on">홀</button><button data-p="church">성당</button>
+              </div>
+              <div class="switch-row"><div class="txt">고음 보호<small>크게 불러도 덜 깨지게</small></div><button class="switch on" id="protectSw"></button></div>
+            </div>
+            <button class="primary" id="endBtn" style="width:100%;margin-top:14px">노래 끝내기</button>
+          </div>
+        </section>
+
+        <section>
+          <h2>채팅</h2>
+          <div class="chat" id="chat"></div>
+          <div class="row"><input id="chatInput" type="text" maxlength="200" placeholder="메시지 입력 후 Enter"><button id="chatBtn">보내기</button></div>
+        </section>
+      </div>
+
+      <div>
+        <section>
+          <h2>예약 목록</h2>
+          <ul class="queue" id="queue"></ul>
+          <div class="row" style="margin-top:10px" id="queueAddRow">
+            <input id="songInput" type="text" maxlength="60" placeholder="부를 곡 (선택)">
+            <button class="primary" id="queueBtn">예약</button>
+          </div>
+          <button class="primary hidden" id="startBtn" style="width:100%;margin-top:10px">🎤 내 차례! 노래 시작</button>
+        </section>
+
+        <section>
+          <h2 id="membersTitle">참여자</h2>
+          <div class="members" id="members"></div>
+        </section>
+
+        <section>
+          <details id="settingsBox">
+            <summary>설정</summary>
+            <div style="margin-top:12px">
+              <div class="field"><span>🎙 마이크</span><select id="micSel"></select></div>
+              <div class="field"><span>🎧 헤드폰</span><select id="outSel"></select></div>
+              <div class="slider"><div class="top"><span>듣는 소리 크기</span><span class="val" id="lVal"></span></div><input id="lVol" type="range" min="0" max="100" value="100"></div>
+              <div class="switch-row"><div class="txt">노래할 때 내 목소리 듣기<small>헤드폰으로 내 목소리(리버브 포함)도 들려요</small></div><button class="switch on" id="monSw"></button></div>
+              <div class="switch-row" id="hostOnly"><div class="txt">듣는 사람도 말하기 <small>방장 설정 · 노래하는 동안에는 자동으로 꺼져요</small></div><button class="switch" id="talkSw"></button></div>
+            </div>
+          </details>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+<div id="toast" class="toast hidden"></div>
+<div id="remotes" class="hidden"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
