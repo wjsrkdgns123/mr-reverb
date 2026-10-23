@@ -33,37 +33,13 @@ const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.crea
 // ───────────────────────── lobby ─────────────────────────
 $('nick').value = store.get('nick', '');
 $('nick').oninput = () => store.set('nick', $('nick').value.trim());
-let makePublic = false;
-document.querySelectorAll('#pubSeg button').forEach((b) => b.onclick = () => {
-  makePublic = b.dataset.pub === '1';
-  document.querySelectorAll('#pubSeg button').forEach((x) => x.classList.toggle('on', x === b));
-});
-
-async function refreshRooms() {
-  const box = $('rooms');
-  try {
-    const rooms = await (await fetch(`${API}/rooms`)).json();
-    box.replaceChildren();
-    if (!rooms.length) { box.append(el('div', { className: 'empty', textContent: '지금 열린 공개 방이 없어요. 방을 만들어 보세요!' })); return; }
-    for (const r of rooms) {
-      const full = r.count >= r.max;
-      const btn = el('button', { className: full ? '' : 'primary', textContent: full ? '가득 참' : '입장', disabled: full });
-      btn.onclick = () => enterRoom(r.id);
-      box.append(el('div', { className: 'room-item' },
-        el('div', { className: 'meta' }, el('div', { className: 'name', textContent: r.name }),
-          el('div', { className: 'now', textContent: r.song ? `🎤 ${r.song}` : '대기 중' })),
-        el('span', { className: 'count', textContent: `${r.count}/${r.max}` }), btn));
-    }
-  } catch { box.replaceChildren(el('div', { className: 'empty', textContent: '방 목록을 불러오지 못했어요.' })); }
-}
-$('refreshBtn').onclick = refreshRooms;
-
+// Rooms are invite-link only (no public lobby), to keep singing among people who know each other.
 $('createBtn').onclick = async () => {
   if (!needNick($('nick'))) return;
   $('createBtn').disabled = true;
   try {
     const r = await fetch(`${API}/rooms`, { method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: $('roomName').value, public: makePublic }) });
+      body: JSON.stringify({ name: $('roomName').value }) });
     const { id } = await r.json();
     await enterRoom(id);
   } catch { toast('방을 만들지 못했어요. 잠시 후 다시 해 주세요.'); }
@@ -80,7 +56,6 @@ function needNick(input) {
 // ───────────────────────── routing ─────────────────────────
 const linkRoom = new URLSearchParams(location.search).get('room');
 if (linkRoom) showJoin(linkRoom);
-else { refreshRooms(); setInterval(() => !$('lobby').classList.contains('hidden') && refreshRooms(), 10000); }
 
 async function showJoin(id) {
   $('lobby').classList.add('hidden');

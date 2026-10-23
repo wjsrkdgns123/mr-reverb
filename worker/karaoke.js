@@ -17,11 +17,11 @@ export default {
     const path = url.pathname;
     if (!path.startsWith('/karaoke/api/')) return env.ASSETS.fetch(request);
 
-    const lobby = env.LOBBY.get(env.LOBBY.idFromName('main'));
-    if (path === '/karaoke/api/rooms' && request.method === 'GET') return json(await lobby.list());
+    // Invite-link rooms only: there is no public room list, and every room is created private.
+    if (path === '/karaoke/api/rooms' && request.method === 'GET') return json([]);
     if (path === '/karaoke/api/rooms' && request.method === 'POST') {
       const body = await request.json().catch(() => ({}));
-      const meta = { id: rand(6), name: clean(body.name, 30) || '노래방', public: !!body.public };
+      const meta = { id: rand(6), name: clean(body.name, 30) || '노래방', public: false };
       await env.ROOM.get(env.ROOM.idFromName(meta.id)).init(meta);
       return json({ id: meta.id });
     }
