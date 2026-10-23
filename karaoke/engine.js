@@ -65,6 +65,7 @@ export class SingEngine {
     this.protectOn = true;
     this.setPreset('hall');
     this.calibrateProtect();
+    setTimeout(() => this.loadKeyNode(), 2000); // preload the key shifter so the first change is instant
   }
 
   get outTrack() { return this.n.out.stream.getAudioTracks()[0]; }
@@ -101,20 +102,24 @@ export class SingEngine {
   setMrMonitor(v) { this.n.mrMon.gain.value = v; }    // what I hear in my headphones
 
   // Key change without changing tempo (SoundTouch, loaded the first time it's needed).
+  loadKeyNode() {
+    this.keyLoading ??= (async () => {
+      const base = new URL('../mr/vendor/soundtouch/', import.meta.url);
+      const { SoundTouchNode } = await import(new URL('SoundTouchNode.js', base).href);
+      await SoundTouchNode.register(this.ctx, new URL('soundtouch-processor.js', base).href);
+      const node = new SoundTouchNode({ context: this.ctx });
+      node.connect(this.n.mrPost);
+      return (this.keyNode = node);
+    })().catch((e) => { console.warn('key change unavailable', e); this.keyLoading = null; });
+    return this.keyLoading;
+  }
+
   async setKey(semi) {
-    if (semi && !this.keyNode) {
-      this.keyLoading ??= (async () => {
-        const base = new URL('../mr/vendor/soundtouch/', import.meta.url);
-        const { SoundTouchNode } = await import(new URL('SoundTouchNode.js', base).href);
-        await SoundTouchNode.register(this.ctx, new URL('soundtouch-processor.js', base).href);
-        const node = new SoundTouchNode({ context: this.ctx });
-        node.connect(this.n.mrPost);
-        return node;
-      })();
-      try { this.keyNode = await this.keyLoading; } catch (e) { console.warn('key change unavailable', e); this.keyLoading = null; return; }
-    }
+    this.wantedKey = semi;
+    if (semi && !this.keyNode) await this.loadKeyNode();
+    // Apply the latest choice: the slider may have moved while the shifter was loading.
     this.n.mrIn.disconnect();
-    if (semi && this.keyNode) { this.keyNode.pitchSemitones.value = semi; this.n.mrIn.connect(this.keyNode); }
+    if (this.wantedKey && this.keyNode) { this.keyNode.pitchSemitones.value = this.wantedKey; this.n.mrIn.connect(this.keyNode); }
     else this.n.mrIn.connect(this.n.mrPost);
   }
   // Convolver output is ~20 dB under the dry voice; ×4.5 puts it ~10 dB under at 30 %.

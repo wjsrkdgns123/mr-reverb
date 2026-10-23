@@ -525,6 +525,7 @@ async function start() {
   bindSliders();
   meterLoop();
   setInterval(showLatency, 1000);
+  setTimeout(loadKeyNode, 2000); // fetch the key shifter in the background so the first key change is instant
   await openMic(store.get('mic', 'default'));
   showLatency();
   // Browsers keep audio suspended until the first click; reflect that in the status line.
@@ -603,23 +604,25 @@ function applyMrMonitor() {
   $('mrMonRow').classList.toggle('hidden', stereo);
 }
 
-let keyNode = null, keyLoading = null;
+let keyNode = null, keyLoading = null, wantedKey = 0;
+function loadKeyNode() {
+  keyLoading ??= (async () => {
+    const { SoundTouchNode } = await import('./vendor/soundtouch/SoundTouchNode.js');
+    await SoundTouchNode.register(ctx, 'vendor/soundtouch/soundtouch-processor.js');
+    const node = new SoundTouchNode({ context: ctx });
+    node.connect(nodes.mrPost);
+    return (keyNode = node);
+  })().catch((e) => { console.warn('key change unavailable', e); keyLoading = null; });
+  return keyLoading;
+}
 async function setKey(semi) {
   if (!nodes.mrIn) return;
-  if (semi && !keyNode) {
-    keyLoading ??= (async () => {
-      const { SoundTouchNode } = await import('./vendor/soundtouch/SoundTouchNode.js');
-      await SoundTouchNode.register(ctx, 'vendor/soundtouch/soundtouch-processor.js');
-      const node = new SoundTouchNode({ context: ctx });
-      node.connect(nodes.mrPost);
-      return node;
-    })();
-    try { keyNode = await keyLoading; }
-    catch (e) { console.warn('key change unavailable', e); keyLoading = null; return; }
-  }
+  wantedKey = semi;
+  if (semi && !keyNode) await loadKeyNode();
+  // Always apply the latest choice: the slider may have moved while the shifter was loading.
   nodes.mrIn.disconnect();
-  if (semi && keyNode) {
-    keyNode.pitchSemitones.value = semi;
+  if (wantedKey && keyNode) {
+    keyNode.pitchSemitones.value = wantedKey;
     nodes.mrIn.connect(keyNode);
   } else {
     nodes.mrIn.connect(nodes.mrPost); // original key: skip the shifter entirely
