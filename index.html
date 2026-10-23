@@ -145,6 +145,31 @@
   .opt.on .use { background: var(--accent); color: #fff; }
   .auto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--soft); border-radius: 12px; padding: 10px 12px; }
   .auto .hint { margin: 0; flex: 1; min-width: 200px; }
+  .status-card { padding: 14px 18px; }
+  .status .lat { margin-left: auto; color: var(--sub); font-size: 12.5px; font-weight: 400; }
+  .drop { padding: 14px 12px; }
+  .balance { display: block; padding: 10px 12px; margin-bottom: 14px; }
+  .balance .lv { gap: 8px; margin: 0; }
+  .balance .lv span { width: auto; }
+  .balance #balanceHint { margin-top: 6px; }
+  .mix { display: grid; grid-template-columns: 52px 1fr 1fr 34px; gap: 4px 10px; align-items: center; margin-bottom: 10px; }
+  .mix.solo { grid-template-columns: 52px 1fr; }
+  .mix.solo .mon { display: none !important; }
+  .mix .colh { font-size: 12px; color: var(--sub); }
+  .mix .lbl, .opt-row .lbl { font-size: 14px; }
+  .mix .cell { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .mix .cell input { flex: 1; min-width: 0; }
+  .mix .val, .opt-row .val { width: 30px; text-align: right; color: var(--sub); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .pairlink { padding: 5px 7px; font-size: 13px; filter: grayscale(1); opacity: .55; }
+  .pairlink.on { filter: none; opacity: 1; background: var(--accent); }
+  .opt-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .opt-row input[type=range] { flex: 1; }
+  .opt-row .grow { flex: 1; }
+  .stepper { display: inline-flex; background: var(--soft); border-radius: 10px; padding: 2px; }
+  .stepper button { background: transparent; padding: 5px 10px; font-size: 14px; }
+  .stepper .kval { min-width: 54px; font-weight: 600; font-size: 13px; }
+  .seg.small button { padding: 6px 8px; font-size: 13px; }
+  footer .links { flex-wrap: wrap; gap: 6px 12px; }
   .linkrow { display: flex; align-items: center; gap: 8px; margin: -4px 0 14px; }
   .linkrow .hint { margin: 0; }
   .pairlink { font-size: 12.5px; padding: 5px 10px; }
@@ -257,35 +282,31 @@
   </div>
 
   <div id="app">
-    <section>
+    <section class="status-card">
       <div class="status">
         <span id="liveDot" class="dot"></span>
         <span id="liveText">준비 중…</span>
+        <span id="latency" class="lat"></span>
       </div>
-      <p class="hint">🎧 듣는 곳: <b id="monName">-</b><span id="monVoiceOff" class="hidden" style="color:var(--warn)"> · 내 목소리 듣기 꺼짐</span>
-        · <a href="#" id="monChange" style="color:var(--accent)">바꾸기</a>
-        · <a href="#" id="autoLink" style="color:var(--accent)">✨ 장치 자동 설정</a></p>
       <p id="defCableWarn" class="hint hidden" style="color:var(--warn)">⚠ Windows 기본 스피커가 <b>CABLE Input</b>으로 바뀌어 있어요.
-        이러면 게임·영상 소리가 안 들려요 → 작업 표시줄 🔊 아이콘 클릭 → 출력 장치를 <b>헤드폰</b>으로 바꾸세요.</p>
-      <p id="latency" class="hint"></p>
+        게임·영상 소리가 안 들리면 작업 표시줄 🔊 → 출력 장치를 <b>헤드폰</b>으로 바꾸세요.</p>
       <p id="clipWarn" class="hint hidden">⚠ 마이크 입력이 너무 커서 깨지고 있어요. 오디오 인터페이스 게인이나 Windows 마이크 볼륨을 낮추고,
-        대신 "내 목소리"를 올려 주세요.</p>
+        대신 "목소리"를 올려 주세요.</p>
       <div id="micSilent" class="diag hidden">
         <b>🎙 마이크 소리가 안 들어와요</b> (지금 마이크: <span id="micSilentName"></span>)<br>
-        말을 해도 아래 "🎤 목소리" 막대가 안 움직이면 마이크가 잘못 잡힌 거예요.
+        말을 해도 🎤 막대가 안 움직이면 마이크가 잘못 잡힌 거예요.
         <div class="acts"><button id="micFixBtn">마이크 바꾸기</button></div>
       </div>
       <div id="stereoMonWarn" class="diag hidden">
         <b>🎧 헤드폰이 Realtek이 아니에요</b> (지금: <span id="stereoMonName"></span>)<br>
-        스테레오 믹스는 Realtek으로 나가는 소리만 송출해요. 이대로면 MR만 나가고 <b>내 목소리·리버브는 안 나가요.</b>
+        스테레오 믹스는 Realtek으로 나가는 소리만 송출해요. 이대로면 MR만 나가고 <b>목소리·리버브는 안 나가요.</b>
         <div class="acts"><button id="realtekFixBtn" class="btn-primary">Realtek으로 바꾸기</button></div>
       </div>
     </section>
 
     <section>
-      <h2>MR</h2>
       <div class="seg" id="srcChips">
-        <button data-src="file">파일</button>
+        <button data-src="file">🎵 MR 파일</button>
         <button data-src="tab">브라우저 탭</button>
       </div>
       <p id="stereoYtHint" class="hint hidden">💡 다른 탭에서 재생하는 소리는 그대로 송출돼요. 볼륨은 그 탭에서 조절하세요.</p>
@@ -293,15 +314,11 @@
       <div id="tabBox" class="hidden">
         <button id="tabBtn">브라우저 탭 소리 연결</button>
         <div id="tabStatus" class="hint"></div>
-        <ol class="mini">
-          <li>같은 브라우저에서 반주가 나오는 탭을 열어 두기</li>
-          <li>버튼 → <b>Chrome 탭</b>에서 그 탭 선택</li>
-          <li><b>탭 오디오도 공유</b> 체크 → 공유</li>
-        </ol>
+        <p class="hint">반주가 나오는 탭을 같은 브라우저에 열어 두고 → <b>Chrome 탭</b>에서 선택 → <b>탭 오디오도 공유</b> 체크</p>
       </div>
 
       <div id="fileBox">
-        <label id="drop" class="drop"><span class="big">🎵</span>MR 파일을 끌어다 놓거나 눌러서 선택</label>
+        <label id="drop" class="drop">파일을 끌어다 놓거나 눌러서 선택</label>
         <input id="file" type="file" accept="audio/*" hidden>
         <div id="track" class="track">
           <div id="trackName" class="track-name"></div>
@@ -319,34 +336,45 @@
     </section>
 
     <section>
-      <h2>소리</h2>
       <div class="balance">
-        <div class="lv"><span>🎤 목소리</span><div class="bar"><i id="voiceLv"></i></div></div>
-        <div class="lv"><span>🎵 MR</span><div class="bar"><i id="mrLv"></i></div></div>
-        <p id="balanceHint" class="hint">노래를 부르면서 MR을 틀면 밸런스를 알려드려요</p>
+        <div class="lv"><span title="목소리">🎤</span><div class="bar"><i id="voiceLv"></i></div>
+          <span title="MR">🎵</span><div class="bar"><i id="mrLv"></i></div></div>
+        <p id="balanceHint" class="hint">부르면서 MR을 틀면 밸런스를 알려드려요</p>
       </div>
-      <div class="slider"><div class="top"><span>내 목소리 <small class="hint">팀원에게</small></span><span class="val" id="voiceVolV"></span></div>
-        <input id="voiceVol" type="range" min="0" max="200" value="100" aria-label="내 목소리 송출 크기"></div>
-      <div class="slider" id="voiceMonRow"><div class="top"><span>내 목소리 <small class="hint">내 헤드폰</small></span><span class="val" id="voiceMonV"></span></div>
-        <input id="voiceMon" type="range" min="0" max="200" value="100" aria-label="내 목소리 내 헤드폰 크기"></div>
-      <div class="linkrow" id="voiceLinkRow"><button type="button" class="pairlink" id="voiceLink"></button><span class="hint">켜면 두 크기가 같이 움직여요</span></div>
-      <div class="slider"><div class="top"><span>MR <small class="hint">팀원에게</small></span><span class="val" id="mrSendV"></span></div>
-        <input id="mrSend" type="range" min="0" max="150" value="40" aria-label="MR 송출 크기"></div>
-      <div class="slider" id="mrMonRow"><div class="top"><span>MR <small class="hint">내 헤드폰</small></span><span class="val" id="mrMonV"></span></div>
-        <input id="mrMon" type="range" min="0" max="150" value="80" aria-label="MR 내 헤드폰 크기"></div>
-      <div class="linkrow" id="mrLinkRow"><button type="button" class="pairlink" id="mrLink"></button><span class="hint">켜면 두 크기가 같이 움직여요</span></div>
-      <div class="slider"><div class="top"><span>MR 키</span><span class="val" id="mrKeyV"></span></div>
-        <div class="keyrow"><button type="button" data-key="mrKey" data-step="-1">♭ -1</button><input id="mrKey" type="range" min="-6" max="6" step="1" value="0" aria-label="MR 키"><button type="button" data-key="mrKey" data-step="1">♯ +1</button><button type="button" data-key="mrKey" data-step="0">원키</button></div></div>
-      <div class="slider"><div class="top"><span>리버브</span><span class="val" id="revAmtV"></span></div>
-        <input id="revAmt" type="range" min="0" max="100" value="30" aria-label="리버브"></div>
-      <div class="seg" id="presets">
+
+      <div class="mix" id="mixGrid">
+        <span></span><span class="colh">팀원에게</span><span class="colh mon">내 헤드폰</span><span class="mon"></span>
+        <span class="lbl">목소리</span>
+        <div class="cell"><input id="voiceVol" type="range" min="0" max="200" value="100" aria-label="목소리 팀원에게"><span class="val" id="voiceVolV"></span></div>
+        <div class="cell mon" id="voiceMonRow"><input id="voiceMon" type="range" min="0" max="200" value="100" aria-label="목소리 내 헤드폰"><span class="val" id="voiceMonV"></span></div>
+        <span class="mon" id="voiceLinkRow"><button type="button" class="pairlink" id="voiceLink"></button></span>
+        <span class="lbl">MR</span>
+        <div class="cell"><input id="mrSend" type="range" min="0" max="150" value="40" aria-label="MR 팀원에게"><span class="val" id="mrSendV"></span></div>
+        <div class="cell mon" id="mrMonRow"><input id="mrMon" type="range" min="0" max="150" value="80" aria-label="MR 내 헤드폰"><span class="val" id="mrMonV"></span></div>
+        <span class="mon" id="mrLinkRow"><button type="button" class="pairlink" id="mrLink"></button></span>
+      </div>
+
+      <div class="opt-row">
+        <span class="lbl">키</span>
+        <div class="stepper">
+          <button type="button" data-key="mrKey" data-step="-1" title="반음 내리기">♭</button>
+          <button type="button" class="kval" id="mrKeyV" data-key="mrKey" data-step="0" title="누르면 원키 · 1키 = 반음"></button>
+          <button type="button" data-key="mrKey" data-step="1" title="반음 올리기">♯</button>
+        </div>
+        <input id="mrKey" type="range" min="-6" max="6" step="1" value="0" hidden>
+        <span class="grow"></span>
+        <span class="lbl" title="크게 불러도 덜 깨지게 (지연 +6ms)">고음 보호</span>
+        <button id="protectBtn" class="switch" aria-label="고음 보호" title="크게 불러도 덜 깨지게 (지연 +6ms)"></button>
+      </div>
+      <div class="opt-row">
+        <span class="lbl">리버브</span>
+        <input id="revAmt" type="range" min="0" max="100" value="30" aria-label="리버브">
+        <span class="val" id="revAmtV"></span>
+      </div>
+      <div class="seg small" id="presets">
         <button data-p="room">방</button>
         <button data-p="hall">홀</button>
         <button data-p="church">성당</button>
-      </div>
-      <div class="switch-row">
-        <div class="txt">고음 보호<small>크게 불러도 덜 깨지게 (지연 +6ms)</small></div>
-        <button id="protectBtn" class="switch" aria-label="고음 보호"></button>
       </div>
     </section>
 
@@ -354,7 +382,8 @@
       <summary>장치 설정</summary>
       <div class="body">
         <button class="autoBtn btn-primary" id="autoBtn">✨ 자동으로 맞추기</button>
-        <p id="autoResult" class="hint" style="margin:6px 0 14px">마이크·송출·헤드폰을 이 PC에 맞게 한 번에 골라 줘요.</p>
+        <p id="autoResult" class="hint" style="margin:6px 0 10px">마이크·송출·헤드폰을 이 PC에 맞게 한 번에 골라 줘요.</p>
+        <p class="hint" style="margin:0 0 14px">🎧 듣는 곳: <b id="monName">-</b><span id="monVoiceOff" class="hidden" style="color:var(--warn)"> · 내 목소리 듣기 꺼짐</span><a href="#" id="monChange" class="hidden"></a><a href="#" id="autoLink" class="hidden"></a></p>
         <div class="field"><span>송출 방식</span>
           <div class="seg" id="modeChips">
             <button data-mode="cable">가상 마이크</button>
@@ -381,7 +410,7 @@
           <li><b>노래할 때 MR·게임 소리가 작아짐</b>: <code>mmsys.cpl</code> → [통신] 탭 → "아무 작업도 안 함"</li>
           <li><b>다른 통화 프로그램 마이크가 이상해짐</b>: 녹음 탭에서 원래 마이크를 다시 "기본 통신 장치로 설정" (노래할 때만 바꿔도 돼요)</li>
           <li><b>CABLE이 안 보임</b>: VB-Cable 설치 후 PC 재시작 → 이 창 새로고침</li>
-          <li><b>내 목소리가 헤드폰으로 안 들림</b>: 위쪽 "🎧 듣는 곳"이 실제 헤드폰인지 확인하고 아니면 [바꾸기], 장치 설정의 "내 목소리 듣기"가 켜져 있는지 확인</li>
+          <li><b>내 목소리가 헤드폰으로 안 들림</b>: 장치 설정의 "🎧 듣는 곳"이 실제 헤드폰인지, "내 목소리 듣기"가 켜져 있는지 확인</li>
           <li><b>VB-Cable 설치 후 PC 소리가 다 안 들림</b>: 작업 표시줄 🔊 → 출력 장치를 헤드폰으로 (VB-Cable이 기본 스피커를 바꿔 놓은 것)</li>
           <li><b>스테레오 믹스가 목록에 없음</b>: <a href="guide.html#realtek" style="color:var(--accent)">Realtek 드라이버 설치 방법</a> 보기</li>
           <li><b>스테레오 믹스로 아무것도 안 나감</b>: 헤드폰이 메인보드 단자에 꽂혀 있고, 장치 설정의 헤드폰이 Realtek인지 확인</li>
@@ -393,23 +422,16 @@
   </div>
 
   <footer>
-    <div id="donateBox" class="hidden">
-      <p>도움이 됐다면 후원으로 응원해 주세요 🙏</p>
-      <div id="donate" class="donate"></div>
-    </div>
+    <div id="donateBox" class="hidden"><div id="donate" class="donate"></div></div>
     <div class="links">
-      <a href="guide.html">VB-Cable 설치 방법</a>
+      <a href="guide.html">📖 사용법</a>
+      <a href="https://voice-meter.input-info.workers.dev/karaoke/" target="_blank" rel="noopener">🎤 노래방</a>
+      <a href="https://voice-meter.input-info.workers.dev/anatomy/" target="_blank" rel="noopener">📐 단면도</a>
+      <a href="https://voice-meter.input-info.workers.dev/" target="_blank" rel="noopener">📊 진단기</a>
+      <a href="https://voice-meter.input-info.workers.dev/xray/" target="_blank" rel="noopener">🔬 X-Ray</a>
     </div>
-    <div class="links">
-      <a href="https://voice-meter.input-info.workers.dev/karaoke/" target="_blank" rel="noopener">🎤 온라인 노래방</a>
-      <a href="https://voice-meter.input-info.workers.dev/anatomy/" target="_blank" rel="noopener">🫁 발성 단면도</a>
-      <a href="https://voice-meter.input-info.workers.dev/" target="_blank" rel="noopener">📊 발성 진단기</a>
-      <a href="https://voice-meter.input-info.workers.dev/xray/" target="_blank" rel="noopener">🩻 성도 X-Ray</a>
-    </div>
-    <p>🔒 마이크 소리는 내 PC 안에서만 처리되고 어디에도 전송되지 않아요.</p>
-    <p>VB-CABLE은 VB-Audio의 기부웨어이며, 이 사이트는 VB-Audio와 관련이 없습니다.</p>
-    <p>🎵 MR·음원은 저작권자의 허락을 받았거나 이용 권리가 있는 것만 사용해 주세요.</p>
-    <p id="contactLine" class="hidden">문의·권리 침해 신고: <a id="contact" target="_blank" rel="noopener"></a></p>
+    <p>🔒 마이크 소리는 내 PC에서만 처리돼요 · 🎵 MR·음원은 이용 권리가 있는 것만 써 주세요</p>
+    <p>VB-CABLE은 VB-Audio의 기부웨어예요(이 사이트와 무관)<span id="contactLine" class="hidden"> · 문의·권리 침해 신고 <a id="contact" target="_blank" rel="noopener"></a></span></p>
   </footer>
 </main>
 
@@ -551,7 +573,7 @@ function showLatency() {
   const procMs = (ctx.baseLatency ?? 0) * 1000;
   const outMs = (ctx.outputLatency ?? 0) * 1000;
   const total = Math.round(inMs + procMs + outMs);
-  $('latency').textContent = total ? `지연 약 ${total}ms` : '';
+  $('latency').textContent = total ? `지연 ${total}ms` : '';
   $('latency').title = `입력 ${Math.round(inMs)} + 처리 ${Math.round(procMs)} + 출력 ${Math.round(outMs)}ms (블루투스 헤드폰 지연 제외)`;
 }
 
@@ -613,23 +635,21 @@ function applyMrMonitor() {
   const stereo = mode === 'stereo';
   nodes.mrMon.gain.value = stereo ? 0 : mrMonLevel;
   nodes.mrMonFromSend.gain.value = stereo ? 1 : 0;
-  $('mrMonRow').classList.toggle('hidden', stereo);
-  $('mrLinkRow').classList.toggle('hidden', stereo);
+  $('mixGrid').classList.toggle('solo', stereo);
 }
 function applyVoiceLevels() {
   if (!nodes.voiceSend) return;
   const stereo = mode === 'stereo';
   nodes.voiceSend.gain.value = voiceSendLevel;
   nodes.monVoice.gain.value = stereo ? voiceSendLevel : monitorVoice ? voiceMonLevel : 0;
-  $('voiceMonRow').classList.toggle('hidden', stereo);
-  $('voiceLinkRow').classList.toggle('hidden', stereo);
+  $('mixGrid').classList.toggle('solo', stereo);
 }
 
 // 🔗 연동: moving one slider of a pair moves the other by the same amount (keeping their gap).
 function linkPair(btnId, aId, bId, key) {
   const btn = $(btnId);
   let on = store.get(key, false), syncing = false;
-  const render = () => { btn.classList.toggle('on', on); btn.textContent = on ? '🔗 연동 켜짐' : '🔗 연동 꺼짐'; };
+  const render = () => { btn.classList.toggle('on', on); btn.textContent = '🔗'; btn.title = on ? '연동 켜짐: 두 크기가 같이 움직여요 (누르면 끄기)' : '연동 꺼짐: 따로 조절 (누르면 켜기)'; btn.setAttribute('aria-pressed', on); };
   btn.onclick = () => { on = !on; store.set(key, on); render(); };
   for (const [src, dst] of [[aId, bId], [bId, aId]]) {
     let prev = +$(src).value;
@@ -837,7 +857,7 @@ function bindSliders() {
   bind('voiceMon', 'voiceMon', (v) => { voiceMonLevel = v / 100; applyVoiceLevels(); }, (v) => v + '%');
   bind('mrSend', 'mrSend', (v) => nodes.mrGain.gain.value = v / 100, (v) => v + '%');
   bind('mrMon', 'mrMon', (v) => { mrMonLevel = v / 100; applyMrMonitor(); }, (v) => v + '%');
-  bind('mrKey', 'mrKey', (v) => setKey(v), (v) => (v === 0 ? '원키' : (v > 0 ? '+' : '−') + Math.abs(v) + '키 (반음 ' + Math.abs(v) + '개 ' + (v > 0 ? '↑' : '↓') + ')'));
+  bind('mrKey', 'mrKey', (v) => setKey(v), (v) => (v === 0 ? '원키' : (v > 0 ? '+' : '−') + Math.abs(v) + '키'));
   // The convolver normalises its impulse, so the raw reverb comes out ~20 dB under the dry voice;
   // ×4.5 puts it about 10 dB under at 30 % and slightly above the dry voice at 100 %.
   bind('revAmt', 'revAmt', (v) => { const x = v / 100; nodes.wet.gain.value = x * 4.5; nodes.dry.gain.value = 1 - x * 0.35; }, (v) => v + '%');
