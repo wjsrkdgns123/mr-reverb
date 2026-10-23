@@ -243,11 +243,13 @@ async function syncSinging() {
 function initSingerControls() {
   const bind = (id, key, def, apply, fmt) => {
     const s = $(id); s.value = store.get(key, def);
-    const upd = () => { apply(+s.value); $(id.replace(/Vol|Amt/, '') + 'Val').textContent = fmt(+s.value); store.set(key, +s.value); };
+    const upd = () => { apply(+s.value); $(id.replace(/Vol|Amt|Key/, '') + 'Val').textContent = fmt(+s.value); store.set(key, +s.value); };
     s.oninput = upd; upd();
   };
   bind('vVol', 'vVol', 100, (v) => engine.setVoice(v / 100), (v) => v + '%');
-  bind('mVol', 'mVol', 60, (v) => engine.setMr(v / 100), (v) => v + '%');
+  bind('mVol', 'mSend', 40, (v) => engine.setMr(v / 100), (v) => v + '%');
+  bind('hVol', 'mMon', 80, (v) => engine.setMrMonitor(v / 100), (v) => v + '%');
+  bind('kKey', 'mKey', 0, (v) => engine.setKey(v), (v) => (v > 0 ? '+' : '') + v + (v ? '키' : ' (원키)'));
   bind('rAmt', 'rAmt', 30, (v) => engine.setReverb(v / 100), (v) => v + '%');
   bind('lVol', 'lVol', 100, (v) => peers.forEach((p) => { p.el.volume = v / 100; }), (v) => v + '%');
 

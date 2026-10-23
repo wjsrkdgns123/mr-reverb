@@ -321,8 +321,12 @@
       </div>
       <div class="slider"><div class="top"><span>내 목소리</span><span class="val" id="voiceVolV"></span></div>
         <input id="voiceVol" type="range" min="0" max="200" value="100" aria-label="내 목소리"></div>
-      <div class="slider"><div class="top"><span>MR</span><span class="val" id="mrVolV"></span></div>
-        <input id="mrVol" type="range" min="0" max="150" value="60" aria-label="MR"></div>
+      <div class="slider"><div class="top"><span>MR <small class="hint">팀원에게</small></span><span class="val" id="mrSendV"></span></div>
+        <input id="mrSend" type="range" min="0" max="150" value="40" aria-label="MR 송출 크기"></div>
+      <div class="slider" id="mrMonRow"><div class="top"><span>MR <small class="hint">내 헤드폰</small></span><span class="val" id="mrMonV"></span></div>
+        <input id="mrMon" type="range" min="0" max="150" value="80" aria-label="MR 내 헤드폰 크기"></div>
+      <div class="slider"><div class="top"><span>MR 키</span><span class="val" id="mrKeyV"></span></div>
+        <input id="mrKey" type="range" min="-6" max="6" step="1" value="0" aria-label="MR 키"></div>
       <div class="slider"><div class="top"><span>리버브</span><span class="val" id="revAmtV"></span></div>
         <input id="revAmt" type="range" min="0" max="100" value="30" aria-label="리버브"></div>
       <div class="seg" id="presets">
@@ -456,9 +460,10 @@ function applyPreset(p) {
 //   mic ─ hp ─┬─ comp ─ makeup ─┐            (comp = "고음 보호", bypass when off)
 //             └─ bypass ────────┴─ voiceIn ─┬─ dry ──────────┐
 //                                           └─ conv ─ wet ───┴─ voiceBus ─┬─ sendMix ─ limiter → <audio sink=CABLE>
-//   mr ─ mrGain ──────────────────────────────────────────────────────────┼─ sendMix
-//                                                                          └─ monVoice ─┐
-//   mrGain ──────────────────────────────────────────────── monitor ─ softClip ─┴─ ctx.destination (headphones)
+//   mr (file/tab) ─ mrIn ─ [key: SoundTouch] ─ mrPost ─┬─ mrGain (팀원에게) ───────┼─ sendMix
+//                                                     │                         └─ monVoice ─┐
+//                                                     └─ mrMon (내 헤드폰) ── monitor ─ softClip ─┴─ ctx.destination
+//   (Stereo Mix mode sends what the headphones play, so there the headphone MR follows mrGain instead of mrMon.)
 async function start() {
   ctx = new AudioContext({ latencyHint: 'interactive' });
   const n = nodes;
@@ -474,7 +479,11 @@ async function start() {
   n.conv = new ConvolverNode(ctx);
   n.wet = new GainNode(ctx);
   n.voiceBus = new GainNode(ctx);
+  n.mrIn = new GainNode(ctx);
+  n.mrPost = new GainNode(ctx);
   n.mrGain = new GainNode(ctx);
+  n.mrMon = new GainNode(ctx);
+  n.mrMonFromSend = new GainNode(ctx, { gain: 0 });
   n.sendMix = new GainNode(ctx);
   n.limiter = new DynamicsCompressorNode(ctx, { threshold: -3, knee: 0, ratio: 20, attack: 0.002, release: 0.1 });
   n.monVoice = new GainNode(ctx);
@@ -497,7 +506,10 @@ async function start() {
   n.voiceBus.connect(n.voiceAn);
   n.mrGain.connect(n.mrAn);
   n.voiceBus.connect(n.monVoice).connect(n.monitor);
-  n.mrGain.connect(n.monitor);
+  n.mrIn.connect(n.mrPost);
+  n.mrPost.connect(n.mrGain);
+  n.mrPost.connect(n.mrMon).connect(n.monitor);
+  n.mrGain.connect(n.mrMonFromSend).connect(n.monitor);
   n.monitor.connect(n.softClip).connect(ctx.destination);
 
   sendEl = new Audio();
@@ -505,7 +517,7 @@ async function start() {
 
   mrEl = new Audio();
   mrEl.loop = store.get('loop', false);
-  ctx.createMediaElementSource(mrEl).connect(n.mrGain);
+  ctx.createMediaElementSource(mrEl).connect(n.mrIn);
 
   applyPreset(preset);
   setProtect(store.get('protect', true));
@@ -581,6 +593,39 @@ async function calibrateProtect() {
   setProtect(store.get('protect', true));
 }
 
+// ---- MR: separate headphone level, and key change (SoundTouch, loaded only when first used) ----
+let mrMonLevel = 0.8;
+function applyMrMonitor() {
+  if (!nodes.mrMon) return;
+  const stereo = mode === 'stereo';
+  nodes.mrMon.gain.value = stereo ? 0 : mrMonLevel;
+  nodes.mrMonFromSend.gain.value = stereo ? 1 : 0;
+  $('mrMonRow').classList.toggle('hidden', stereo);
+}
+
+let keyNode = null, keyLoading = null;
+async function setKey(semi) {
+  if (!nodes.mrIn) return;
+  if (semi && !keyNode) {
+    keyLoading ??= (async () => {
+      const { SoundTouchNode } = await import('./vendor/soundtouch/SoundTouchNode.js');
+      await SoundTouchNode.register(ctx, 'vendor/soundtouch/soundtouch-processor.js');
+      const node = new SoundTouchNode({ context: ctx });
+      node.connect(nodes.mrPost);
+      return node;
+    })();
+    try { keyNode = await keyLoading; }
+    catch (e) { console.warn('key change unavailable', e); keyLoading = null; return; }
+  }
+  nodes.mrIn.disconnect();
+  if (semi && keyNode) {
+    keyNode.pitchSemitones.value = semi;
+    nodes.mrIn.connect(keyNode);
+  } else {
+    nodes.mrIn.connect(nodes.mrPost); // original key: skip the shifter entirely
+  }
+}
+
 function setProtect(on) {
   store.set('protect', on);
   nodes.makeup.gain.value = on ? protectMakeup : 0;
@@ -638,6 +683,7 @@ function setMode(m, save = true) {
   $('optCable').classList.toggle('on', !stereo);
   document.querySelectorAll('.opt .use').forEach((b) => { b.textContent = b.dataset.mode === m ? '✓ 사용 중' : '이 방법 쓰기'; });
   $('owInput').textContent = stereo ? '스테레오 믹스' : 'CABLE Output';
+  applyMrMonitor();
   $('sendRow').classList.toggle('hidden', stereo);
   $('monVoiceRow').classList.toggle('hidden', stereo);
   $('monLabel').textContent = stereo ? '🎧 헤드폰 = 송출 장치 (메인보드 Realtek 단자)' : '🎧 헤드폰';
@@ -742,7 +788,9 @@ function bindSliders() {
     el.addEventListener('input', update); update();
   };
   bind('voiceVol', 'voiceVol', (v) => nodes.micGain.gain.value = v / 100, (v) => v + '%');
-  bind('mrVol', 'mrVol', (v) => nodes.mrGain.gain.value = v / 100, (v) => v + '%');
+  bind('mrSend', 'mrSend', (v) => nodes.mrGain.gain.value = v / 100, (v) => v + '%');
+  bind('mrMon', 'mrMon', (v) => { mrMonLevel = v / 100; applyMrMonitor(); }, (v) => v + '%');
+  bind('mrKey', 'mrKey', (v) => setKey(v), (v) => (v > 0 ? '+' : '') + v + (v ? '키' : ' (원키)'));
   // The convolver normalises its impulse, so the raw reverb comes out ~20 dB under the dry voice;
   // ×4.5 puts it about 10 dB under at 30 % and slightly above the dry voice at 100 %.
   bind('revAmt', 'revAmt', (v) => { const x = v / 100; nodes.wet.gain.value = x * 4.5; nodes.dry.gain.value = 1 - x * 0.35; }, (v) => v + '%');
@@ -865,7 +913,7 @@ async function connectTab() {
   }
   tabStream = s;
   tabSrc = ctx.createMediaStreamSource(new MediaStream(s.getAudioTracks()));
-  tabSrc.connect(nodes.mrGain);
+  tabSrc.connect(nodes.mrIn);
   s.getAudioTracks()[0].addEventListener('ended', disconnectTab);
   $('tabBtn').textContent = '🔴 연결됨 — 끊기';
   $('tabBtn').classList.add('on');

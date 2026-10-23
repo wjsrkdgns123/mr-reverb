@@ -5,9 +5,9 @@
 //   mic ─ hp ─┬─ comp ─ makeup ─┐
 //             └─ bypass ────────┴─ voiceIn ─┬─ dry ─────────┐
 //                                           └─ conv ─ wet ──┴─ voiceBus ─┬─ sendMix ─ limiter ─ out (WebRTC)
-//   MR (file / tab) ─ mrGain ────────────────────────────────────────────┤
-//                                                                         └─ monitor ─ softClip ─ headphones
-// (the MR always reaches the monitor; the voice only when monitorVoice is on)
+//   MR (file / tab) ─ mrIn ─ [key: SoundTouch] ─ mrPost ─┬─ mrGain (to listeners) ─┤
+//                                                       └─ mrMon (my headphones) ─┴─ monitor ─ softClip ─ headphones
+// (the voice reaches the monitor only when monitorVoice is on)
 
 const PRESETS = { room: { decay: 0.9, pre: 0.008 }, hall: { decay: 2.2, pre: 0.02 }, church: { decay: 4.2, pre: 0.035 } };
 const COMP_OPTS = { threshold: -20, knee: 12, ratio: 4, attack: 0.003, release: 0.15 };
@@ -28,7 +28,10 @@ export class SingEngine {
     n.conv = new ConvolverNode(c);
     n.wet = new GainNode(c);
     n.voiceBus = new GainNode(c);
+    n.mrIn = new GainNode(c);
+    n.mrPost = new GainNode(c);
     n.mrGain = new GainNode(c);
+    n.mrMon = new GainNode(c, { gain: 0.8 });
     n.sendMix = new GainNode(c);
     n.limiter = new DynamicsCompressorNode(c, { threshold: -3, knee: 0, ratio: 20, attack: 0.002, release: 0.1 });
     n.out = new MediaStreamAudioDestinationNode(c, { channelCount: 2 });
@@ -48,13 +51,15 @@ export class SingEngine {
     n.mrGain.connect(n.sendMix);
     n.sendMix.connect(n.limiter).connect(n.out);
     n.voiceBus.connect(n.monVoice).connect(n.monitor);
-    n.mrGain.connect(n.monitor);
+    n.mrIn.connect(n.mrPost);
+    n.mrPost.connect(n.mrGain);
+    n.mrPost.connect(n.mrMon).connect(n.monitor);
     n.monitor.connect(n.softClip).connect(c.destination);
     n.voiceBus.connect(n.voiceAn);
     n.mrGain.connect(n.mrAn);
 
     this.mrEl = new Audio();
-    c.createMediaElementSource(this.mrEl).connect(n.mrGain);
+    c.createMediaElementSource(this.mrEl).connect(n.mrIn);
     this.mic = null; this.micSrc = null; this.tab = null; this.tabSrc = null;
     this.protectMakeup = 0.355;
     this.protectOn = true;
@@ -92,7 +97,26 @@ export class SingEngine {
   }
 
   setVoice(v) { this.n.micGain.gain.value = v; }
-  setMr(v) { this.n.mrGain.gain.value = v; }
+  setMr(v) { this.n.mrGain.gain.value = v; }          // what listeners hear
+  setMrMonitor(v) { this.n.mrMon.gain.value = v; }    // what I hear in my headphones
+
+  // Key change without changing tempo (SoundTouch, loaded the first time it's needed).
+  async setKey(semi) {
+    if (semi && !this.keyNode) {
+      this.keyLoading ??= (async () => {
+        const base = new URL('../mr/vendor/soundtouch/', import.meta.url);
+        const { SoundTouchNode } = await import(new URL('SoundTouchNode.js', base).href);
+        await SoundTouchNode.register(this.ctx, new URL('soundtouch-processor.js', base).href);
+        const node = new SoundTouchNode({ context: this.ctx });
+        node.connect(this.n.mrPost);
+        return node;
+      })();
+      try { this.keyNode = await this.keyLoading; } catch (e) { console.warn('key change unavailable', e); this.keyLoading = null; return; }
+    }
+    this.n.mrIn.disconnect();
+    if (semi && this.keyNode) { this.keyNode.pitchSemitones.value = semi; this.n.mrIn.connect(this.keyNode); }
+    else this.n.mrIn.connect(this.n.mrPost);
+  }
   // Convolver output is ~20 dB under the dry voice; ×4.5 puts it ~10 dB under at 30 %.
   setReverb(x) { this.n.wet.gain.value = x * 4.5; this.n.dry.gain.value = 1 - x * 0.35; }
   setMonitorVoice(on) { this.n.monVoice.gain.value = on ? 1 : 0; }
@@ -147,7 +171,7 @@ export class SingEngine {
     this.disconnectTab();
     this.tab = s;
     this.tabSrc = this.ctx.createMediaStreamSource(new MediaStream(s.getAudioTracks()));
-    this.tabSrc.connect(this.n.mrGain);
+    this.tabSrc.connect(this.n.mrIn);
     return s;
   }
 
