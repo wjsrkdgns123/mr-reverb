@@ -84,10 +84,24 @@
   .transport input { flex: 1; }
   .time { color: var(--sub); font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 76px; text-align: right; }
 
+  .mix { display: grid; grid-template-columns: 52px 1fr 1fr 34px; gap: 4px 10px; align-items: center; margin: 14px 0 6px; }
+  .mix .colh { font-size: 12px; color: var(--sub); }
+  .mix .lbl, .opt-row .lbl { font-size: 14px; }
+  .mix .cell { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .mix .cell input { flex: 1; min-width: 0; }
+  .mix .val, .opt-row .val { width: 30px; text-align: right; color: var(--sub); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .opt-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .opt-row input[type=range] { flex: 1; }
+  .opt-row .grow { flex: 1; }
+  .stepper { display: inline-flex; background: var(--soft); border-radius: 10px; padding: 2px; }
+  .stepper button { background: transparent; padding: 5px 10px; font-size: 14px; }
+  .stepper .kval { min-width: 54px; font-weight: 600; font-size: 13px; }
+  .seg.small button { padding: 6px 8px; font-size: 13px; }
+  .drop { padding: 12px; }
   .linkrow { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px; }
   .linkrow .hint { margin: 0; }
-  .pairlink { font-size: 12.5px; padding: 5px 10px; }
-  .pairlink.on { background: var(--accent); color: #fff; }
+  .pairlink { padding: 5px 7px; font-size: 13px; filter: grayscale(1); opacity: .55; }
+  .pairlink.on { filter: none; opacity: 1; background: var(--accent); }
   .keyrow { display: flex; align-items: center; gap: 6px; }
   .keyrow input { flex: 1; }
   .keyrow button { padding: 6px 10px; font-size: 13px; white-space: nowrap; }
@@ -159,7 +173,7 @@
   <!-- 방 -->
   <div id="roomView" class="hidden">
     <div class="row" style="margin-bottom:12px;flex-wrap:wrap">
-      <button id="copyBtn">🔗 초대 링크 복사</button>
+      <button id="copyBtn">🔗 링크 복사</button>
       <button id="talkBtn">🎙 마이크 꺼짐</button>
       <span style="flex:1"></span>
       <button id="leaveBtn" class="danger">나가기</button>
@@ -187,7 +201,7 @@
               <button data-src="tab">▶ 브라우저 탭</button>
             </div>
             <div id="fileBox">
-              <label class="drop" id="drop">MR 파일을 끌어다 놓거나 눌러서 선택</label>
+              <label class="drop" id="drop">MR 파일 선택 · 끌어다 놓기</label>
               <input id="file" type="file" accept="audio/*" hidden>
               <div class="transport hidden" id="transport">
                 <button id="playBtn">▶</button>
@@ -199,26 +213,37 @@
               <button id="tabBtn" style="width:100%">브라우저 탭 소리 연결</button>
               <p class="hint">같은 브라우저에서 반주가 나오는 탭을 열어 두고 → Chrome 탭 선택 → "탭 오디오도 공유" 체크</p>
             </div>
-            <div style="margin-top:14px">
-              <div class="slider"><div class="top"><span>내 목소리 <small class="hint">듣는 사람에게</small></span><span class="val" id="vVal"></span></div><input id="vVol" type="range" min="0" max="200" value="100"></div>
-              <div class="slider"><div class="top"><span>내 목소리 <small class="hint">내 헤드폰</small></span><span class="val" id="wVal"></span></div><input id="wVol" type="range" min="0" max="200" value="100"></div>
-              <div class="linkrow"><button type="button" class="pairlink" id="vLink"></button><span class="hint">켜면 두 크기가 같이 움직여요</span></div>
-              <div class="slider"><div class="top"><span>MR <small class="hint">듣는 사람에게</small></span><span class="val" id="mVal"></span></div><input id="mVol" type="range" min="0" max="150" value="40"></div>
-              <div class="slider"><div class="top"><span>MR <small class="hint">내 헤드폰</small></span><span class="val" id="hVal"></span></div><input id="hVol" type="range" min="0" max="150" value="80"></div>
-              <div class="linkrow"><button type="button" class="pairlink" id="mLink"></button><span class="hint">켜면 두 크기가 같이 움직여요</span></div>
-              <div class="slider"><div class="top"><span>MR 키</span><span class="val" id="kVal"></span></div><div class="keyrow"><button type="button" data-key="kKey" data-step="-1">♭ -1</button><input id="kKey" type="range" min="-6" max="6" step="1" value="0" aria-label="MR 키"><button type="button" data-key="kKey" data-step="1">♯ +1</button><button type="button" data-key="kKey" data-step="0">원키</button></div></div>
-              <div class="slider"><div class="top"><span>리버브</span><span class="val" id="rVal"></span></div><input id="rAmt" type="range" min="0" max="100" value="30"></div>
-              <div class="seg" id="presetSeg">
-                <button data-p="room">방</button><button data-p="hall" class="on">홀</button><button data-p="church">성당</button>
+            <div class="mix">
+              <span></span><span class="colh">듣는 사람에게</span><span class="colh">내 헤드폰</span><span></span>
+              <span class="lbl">목소리</span>
+              <div class="cell"><input id="vVol" type="range" min="0" max="200" value="100" aria-label="목소리 듣는 사람에게"><span class="val" id="vVal"></span></div>
+              <div class="cell"><input id="wVol" type="range" min="0" max="200" value="100" aria-label="목소리 내 헤드폰"><span class="val" id="wVal"></span></div>
+              <button type="button" class="pairlink" id="vLink"></button>
+              <span class="lbl">MR</span>
+              <div class="cell"><input id="mVol" type="range" min="0" max="150" value="40" aria-label="MR 듣는 사람에게"><span class="val" id="mVal"></span></div>
+              <div class="cell"><input id="hVol" type="range" min="0" max="150" value="80" aria-label="MR 내 헤드폰"><span class="val" id="hVal"></span></div>
+              <button type="button" class="pairlink" id="mLink"></button>
+            </div>
+            <div class="opt-row">
+              <span class="lbl">키</span>
+              <div class="stepper">
+                <button type="button" data-key="kKey" data-step="-1" title="반음 내리기">♭</button>
+                <button type="button" class="kval" id="kVal" data-key="kKey" data-step="0" title="누르면 원키 · 1키 = 반음"></button>
+                <button type="button" data-key="kKey" data-step="1" title="반음 올리기">♯</button>
               </div>
-              <div class="switch-row"><div class="txt">고음 보호<small>크게 불러도 덜 깨지게</small></div><button class="switch on" id="protectSw"></button></div>
+              <input id="kKey" type="range" min="-6" max="6" step="1" value="0" hidden>
+              <span class="grow"></span>
+              <span class="lbl" title="크게 불러도 덜 깨지게">고음 보호</span><button class="switch on" id="protectSw" title="크게 불러도 덜 깨지게"></button>
+            </div>
+            <div class="opt-row"><span class="lbl">리버브</span><input id="rAmt" type="range" min="0" max="100" value="30"><span class="val" id="rVal"></span></div>
+            <div class="seg small" id="presetSeg">
+              <button data-p="room">방</button><button data-p="hall" class="on">홀</button><button data-p="church">성당</button>
             </div>
             <button class="primary" id="endBtn" style="width:100%;margin-top:14px">노래 끝내기</button>
           </div>
         </section>
 
         <section>
-          <h2>채팅</h2>
           <div class="chat" id="chat"></div>
           <div class="row"><input id="chatInput" type="text" maxlength="200" placeholder="메시지 입력 후 Enter"><button id="chatBtn">보내기</button></div>
         </section>
@@ -226,18 +251,15 @@
 
       <div>
         <section>
-          <h2>예약 목록</h2>
+          <h2 id="membersTitle">참여자</h2>
+          <div class="members" id="members"></div>
+          <h2 style="margin-top:16px">예약</h2>
           <ul class="queue" id="queue"></ul>
           <div class="row" style="margin-top:10px" id="queueAddRow">
             <input id="songInput" type="text" maxlength="60" placeholder="부를 곡 (선택)">
             <button class="primary" id="queueBtn">예약</button>
           </div>
           <button class="primary hidden" id="startBtn" style="width:100%;margin-top:10px">🎤 내 차례! 노래 시작</button>
-        </section>
-
-        <section>
-          <h2 id="membersTitle">참여자</h2>
-          <div class="members" id="members"></div>
         </section>
 
         <section>

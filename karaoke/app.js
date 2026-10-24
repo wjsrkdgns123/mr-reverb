@@ -250,7 +250,7 @@ function initSingerControls() {
   bind('wVol', 'vMon', 100, (v) => engine.setVoiceMonitor(v / 100), (v) => v + '%');
   bind('mVol', 'mSend', 40, (v) => engine.setMr(v / 100), (v) => v + '%');
   bind('hVol', 'mMon', 80, (v) => engine.setMrMonitor(v / 100), (v) => v + '%');
-  bind('kKey', 'mKey', 0, (v) => engine.setKey(v), (v) => (v === 0 ? '원키' : (v > 0 ? '+' : '−') + Math.abs(v) + '키 (반음 ' + Math.abs(v) + '개 ' + (v > 0 ? '↑' : '↓') + ')'));
+  bind('kKey', 'mKey', 0, (v) => engine.setKey(v), (v) => (v === 0 ? '원키' : (v > 0 ? '+' : '−') + Math.abs(v) + '키'));
   bind('rAmt', 'rAmt', 30, (v) => engine.setReverb(v / 100), (v) => v + '%');
   bind('lVol', 'lVol', 100, (v) => peers.forEach((p) => { p.el.volume = v / 100; }), (v) => v + '%');
 
@@ -327,7 +327,7 @@ function initSingerControls() {
 function linkPair(btnId, aId, bId, key) {
   const btn = $(btnId);
   let on = store.get(key, false), syncing = false;
-  const render = () => { btn.classList.toggle('on', on); btn.textContent = on ? '🔗 연동 켜짐' : '🔗 연동 꺼짐'; };
+  const render = () => { btn.classList.toggle('on', on); btn.textContent = '🔗'; btn.title = on ? '연동 켜짐: 두 크기가 같이 움직여요 (누르면 끄기)' : '연동 꺼짐: 따로 조절 (누르면 켜기)'; btn.setAttribute('aria-pressed', on); };
   btn.onclick = () => { on = !on; store.set(key, on); render(); };
   for (const [src, dst] of [[aId, bId], [bId, aId]]) {
     let prev = +$(src).value;
